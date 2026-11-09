@@ -22,6 +22,10 @@ beforeEach(() => {
 });
 
 describe('staff portfolio boundary', () => {
+  it.each(['portfolio', ''])('allows property creation without selecting an existing property (%s)', id => {
+    mocks.id = id; mocks.properties = []; view('/properties/new');
+    expect(screen.getByText('Operational page')).toBeInTheDocument();
+  });
   it.each(['/integrations', '/rooms', '/reservations', '/groups', '/settings?tab=users', '/channels/connection-a', '/channels/rate-parity'])('does not mount property-scoped pages at %s', path => {
     render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
     expect(screen.getByRole('heading', { name: 'Choose a property' })).toBeInTheDocument();
