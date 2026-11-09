@@ -2409,6 +2409,7 @@
     "nextSteps": "The property is selected. Add room types and individual rooms, then configure rates and policies before taking bookings. Photos and further property details are in Settings.",
     "setupRooms": "Set up rooms",
     "setupRates": "Set up rates",
-    "setupSettings": "Property settings and photos"
+    "setupSettings": "Property settings and photos",
+    "another": "Add another property"
   }
 }

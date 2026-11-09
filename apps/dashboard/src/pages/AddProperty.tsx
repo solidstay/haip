@@ -26,9 +26,10 @@ export default function AddProperty() {
   const [created, setCreated] = useState<PropertySummary | null>(null);
   const [requestError, setRequestError] = useState('');
   const submitting = useRef(false);
+  const focusNewForm = useRef(false);
   const feedback = useRef<HTMLParagraphElement>(null);
   const successHeading = useRef<HTMLHeadingElement>(null);
-  const { register, handleSubmit, setError, setFocus, formState: { errors, isSubmitting } } = useForm<PropertyForm>({
+  const { register, handleSubmit, reset, setError, setFocus, formState: { errors, isSubmitting } } = useForm<PropertyForm>({
     defaultValues: { checkInTime: '15:00', checkOutTime: '11:00' },
   });
 
@@ -37,6 +38,7 @@ export default function AddProperty() {
     if (errors.code?.type === 'server') setFocus('code');
     else if (requestError) feedback.current?.focus();
     else if (created) successHeading.current?.focus();
+    else if (focusNewForm.current) { setFocus('name'); focusNewForm.current = false; }
   }, [isSubmitting, errors.code, requestError, created, setFocus]);
 
   if (!hasRole('admin')) return <section className="max-w-2xl">
@@ -98,6 +100,9 @@ export default function AddProperty() {
         <Link className={linkClass} to={`/rate-plans${query}`}>{t('addProperty.setupRates')}</Link>
         <Link className={linkClass} to={`/settings${query}`}>{t('addProperty.setupSettings')}</Link>
       </div>
+      <button type="button" className={`${linkClass} mt-6`} onClick={() => {
+        reset(); setRequestError(''); focusNewForm.current = true; setCreated(null);
+      }}>{t('addProperty.another')}</button>
     </section>;
   }
 

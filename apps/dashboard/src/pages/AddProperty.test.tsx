@@ -32,6 +32,15 @@ describe('Add property', () => {
     expect(screen.getByRole('link', { name: 'Set up rooms' })).toHaveAttribute('href', '/rooms?propertyId=new-property');
     expect(screen.queryByRole('button', { name: 'Create property' })).not.toBeInTheDocument();
   });
+  it('starts another property with a clean form and keyboard focus after creation', async () => {
+    setup(); await fill(); await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add another property' }));
+    expect(screen.getByLabelText('Property name *')).toHaveValue('');
+    expect(screen.getByLabelText('Property name *')).toHaveFocus();
+    expect(screen.getByLabelText('Property code *')).toHaveValue('');
+    expect(screen.getByLabelText('Check-in time *')).toHaveValue('15:00');
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+  });
   it('blocks missing fields and invalid timezone and room count before writing', async () => {
     setup(); await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
     expect(screen.getByLabelText('Property name *')).toHaveFocus();
