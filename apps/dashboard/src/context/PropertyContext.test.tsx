@@ -21,6 +21,8 @@ function Harness() {
     <button onClick={() => navigate('/reservations?propertyId=property-b')}>Linked second property</button>
     <button onClick={() => context.setPropertyId('property-b')}>Select second property</button>
     <button onClick={() => context.setPropertyId(PORTFOLIO_MODE_ID)}>Select portfolio</button>
+    <button onClick={() => { context.addCreatedProperty({ id: 'created-property', name: 'New property', code: 'NEW', currencyCode: 'GBP' }); navigate('/properties/new?propertyId=created-property'); }}>Create property</button>
+    <output data-testid="property-count">{context.properties.length}</output>
     <button onClick={() => navigate(-1)}>Back</button>
     <button onClick={() => navigate(1)}>Forward</button>
   </>;
@@ -33,6 +35,24 @@ beforeEach(() => {
   mocks.get.mockImplementation((path: string) => Promise.resolve({ data: path === '/v1/properties' ? properties : [] }));
 });
 describe('PropertyProvider navigation scope', () => {
+  it('registers a created property and resolves its currency and selection immediately', async () => {
+    setup('/properties/new?propertyId=portfolio');
+    await waitFor(() => expect(screen.getByTestId('property-count')).toHaveTextContent('2'));
+    await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
+    expect(screen.getByTestId('property-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('scope')).toHaveTextContent('created-property');
+    expect(screen.getByTestId('currency')).toHaveTextContent('GBP');
+    expect(mocks.join).toHaveBeenCalledWith('created-property');
+  });
+  it('retains a created property when an older bootstrap response arrives later', async () => {
+    let resolveProperties!: (value: { data: typeof properties }) => void;
+    mocks.get.mockImplementation((path: string) => path === '/v1/properties' ? new Promise(resolve => { resolveProperties = resolve; }) : Promise.resolve({ data: [] }));
+    setup('/properties/new');
+    await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
+    resolveProperties({ data: properties });
+    await waitFor(() => expect(screen.getByTestId('property-count')).toHaveTextContent('3'));
+    expect(screen.getByTestId('currency')).toHaveTextContent('GBP');
+  });
   it('retains a selected property across bare navigation and a fresh provider mount', async () => {
     const first = setup('/reservations?propertyId=property-a');
     await screen.findByText('EUR');

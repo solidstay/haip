@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, Search, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useProperty } from '../../context/PropertyContext';
 
 /** Only these views implement aggregation or individually scoped reads.
@@ -16,6 +17,9 @@ export default function PropertyScopeBoundary({ children }: { children: ReactNod
   const { pathname } = useLocation();
   const { propertyId, isPortfolioMode } = useProperty();
 
+  // Property creation does not require an existing tenant; the page and API enforce admin access.
+  if (pathname.replace(/\/+$/, '') === '/properties/new') return children;
+
   if (propertyId && (!isPortfolioMode || supportsPortfolio(pathname))) return children;
 
   return <PropertyChooser />;
@@ -28,6 +32,7 @@ function searchText(value: string): string {
 
 function PropertyChooser() {
   const { t, i18n } = useTranslation();
+  const { hasRole } = useAuth();
   const { properties, propertiesLoading, propertiesError, setPropertyId } = useProperty();
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -80,6 +85,7 @@ function PropertyChooser() {
               </div>}
             </> : <div className="py-6 text-center"><p className="text-sm text-telivity-slate">{t('propertyScope.noMatches')}</p><button type="button" onClick={clearSearch} className="mt-2 min-h-[44px] rounded-lg px-3 py-2 text-sm font-medium text-telivity-teal hover:bg-telivity-light-grey focus-visible:outline focus-visible:outline-2 focus-visible:outline-telivity-teal">{t('propertyScope.clearSearch')}</button></div>}
           </> : <p className="mt-5 text-sm text-telivity-slate">{t('propertyScope.empty')}</p>}
+      {hasRole('admin') && <Link to="/properties/new" className="mt-5 inline-flex min-h-[44px] items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-telivity-teal">{t('addProperty.title')}</Link>}
     </section>
     </div>
   );

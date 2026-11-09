@@ -16,6 +16,7 @@ interface PropertyContextValue {
   setPropertyId: (id: string) => void;
   isPortfolioMode: boolean;
   properties: PropertySummary[];
+  addCreatedProperty: (property: PropertySummary) => void;
   organizations: OrganizationSummary[];
   propertiesLoading: boolean;
   propertiesError: string | null;
@@ -27,6 +28,7 @@ const PropertyContext = createContext<PropertyContextValue>({
   setPropertyId: () => {},
   isPortfolioMode: false,
   properties: [],
+  addCreatedProperty: () => {},
   organizations: [],
   propertiesLoading: false,
   propertiesError: null,
@@ -96,7 +98,7 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
       .then(([propRes, orgRes]) => {
         const list: PropertySummary[] = propRes.data?.data ?? propRes.data ?? [];
         const orgList: OrganizationSummary[] = orgRes.data?.data ?? orgRes.data ?? [];
-        setProperties(list);
+        setProperties(current => [...list, ...current.filter(item => !list.some(loaded => loaded.id === item.id))]);
         setOrganizations(orgList);
       })
       .catch((err) => {
@@ -127,6 +129,9 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
         setPropertyId,
         isPortfolioMode,
         properties,
+        addCreatedProperty: (property) => {
+          setProperties(current => [...current.filter(item => item.id !== property.id), property]);
+        },
         organizations,
         propertiesLoading,
         propertiesError,

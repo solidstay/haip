@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, ConflictException } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
 import { properties, media } from '@telivityhaip/database';
 import { DRIZZLE } from '../../database/database.module';
@@ -19,11 +19,21 @@ export class PropertyService {
   ) {}
 
   async create(dto: CreatePropertyDto) {
-    const [property] = await this.db
-      .insert(properties)
-      .values(dto)
-      .returning();
-    return this.withLogoUrl(property as PropertyRow);
+    try {
+      const [property] = await this.db
+        .insert(properties)
+        .values(dto)
+        .returning();
+      return await this.withLogoUrl(property as PropertyRow);
+    } catch (error) {
+      // Let PostgreSQL arbitrate concurrent creates; a preflight read can race.
+      const failure = error as { code?: string; constraint_name?: string; cause?: { code?: string; constraint_name?: string } };
+      const databaseError = failure.cause ?? failure;
+      if (databaseError.code === '23505' && ['properties_code_key', 'properties_code_unique'].includes(databaseError.constraint_name ?? '')) {
+        throw new ConflictException('Property code already exists');
+      }
+      throw error;
+    }
   }
 
   async findAll(): Promise<(PropertyRow & { staffLogoUrl: string | null })[]> {

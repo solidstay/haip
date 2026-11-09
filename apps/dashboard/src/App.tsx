@@ -21,6 +21,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Channels = lazy(() => import('./pages/Channels'));
 const Communications = lazy(() => import('./pages/Communications'));
 const Reviews = lazy(() => import('./pages/Reviews'));
+const AddProperty = lazy(() => import('./pages/AddProperty'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Import = lazy(() => import('./pages/Import'));
 const Integrations = lazy(() => import('./pages/Integrations'));
@@ -42,6 +43,7 @@ export default function App() {
           <PropertyScopeBoundary>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/properties/new" element={<AddProperty />} />
               <Route path="/front-desk" element={<FrontDesk />} />
               {isBookingRequestsUiEnabled() && (
                 <Route path="/booking-requests/*" element={<BookingRequests />} />
