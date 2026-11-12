@@ -2451,7 +2451,9 @@
       "reviews": "Reviews",
       "staff": "Staff and roles",
       "import": "Data import"
-    }
+    },
+    "administration": "Administration",
+    "backToStaff": "Back to staff dashboard"
   },
   "propertyHub": {
     "title": "Properties",

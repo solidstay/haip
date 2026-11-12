@@ -1,6 +1,8 @@
 # Shared dashboard navigation
 
-Administrators can use **Admin features** (`/admin/features`) to choose optional menu entries for all staff and all properties in this installation. **Use Essentials** selects the core property/photo, room, rate, reservation, enquiry and settings workflow. **Show all tools** selects every optional surface. Changes apply on Save; other sessions refetch within one minute or on window focus.
+Administrators can open **Administration → Admin features** (`/admin/features`) to choose optional menu entries for all staff and all properties in this installation. **Use Essentials** selects the core property/photo, room, rate, reservation, enquiry and settings workflow. **Show all tools** selects every optional surface. Changes apply on Save; other sessions refetch within one minute or on window focus.
+
+The Administration view has its own layout and return link. Ordinary staff see no entry point and direct visits redirect them to Properties before controls mount.
 
 These are presentation preferences, not authorization. Existing API permissions, background services, operational data and direct links remain active. Booking-linked guest and folio details continue working. Users and Roles/Webhooks tabs follow the matching optional menu groups. Booking requests still require the existing deployment feature flag.
 

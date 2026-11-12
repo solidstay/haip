@@ -1,6 +1,7 @@
 import { useDashboardFeatures } from './context/DashboardFeaturesContext';
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import AdminLayout from './components/layout/AdminLayout';
 import AppLayout from './components/layout/AppLayout';
 import PropertyScopeBoundary from './components/layout/PropertyScopeBoundary';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -40,6 +41,16 @@ const BookingRequests = lazy(() => import('./pages/BookingRequests'));
 export default function App() {
   useRealtimeInvalidation();
   const { hasFeature } = useDashboardFeatures();
+  const { pathname } = useLocation();
+
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return (
+    <AdminLayout><ErrorBoundary><Suspense fallback={<SkeletonPage />}>
+      <Routes>
+        <Route path="/admin/features" element={<AdminFeatures />} />
+        <Route path="*" element={<Navigate to="/admin/features" replace />} />
+      </Routes>
+    </Suspense></ErrorBoundary></AdminLayout>
+  );
 
   return (
     <AppLayout>
@@ -49,7 +60,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={hasFeature('analytics') ? <Dashboard /> : <Properties />} />
               <Route path="/properties" element={<Properties />} />
-              <Route path="/admin/features" element={<AdminFeatures />} />
               <Route path="/properties/new" element={<AddProperty />} />
               <Route path="/front-desk" element={<FrontDesk />} />
               {isBookingRequestsUiEnabled() && (
