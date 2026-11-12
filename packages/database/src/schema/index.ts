@@ -284,3 +284,5 @@ export {
   migrationRowResults,
 } from './migration.js';
 export { stripeWebhookEvents, directBookingAttempts, stripeCheckouts, stripeInvoices } from './stripe-operations.js';
+
+export { dashboardSettings } from './dashboard-settings.js';

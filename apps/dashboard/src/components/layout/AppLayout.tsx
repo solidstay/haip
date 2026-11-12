@@ -1,4 +1,6 @@
 import { useState, useEffect, type ReactNode, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDashboardFeatures } from '../../context/DashboardFeaturesContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../../context/AuthContext';
@@ -6,6 +8,8 @@ import { useProperty } from '../../context/PropertyContext';
 import { useMyPermissions } from '../../hooks/useAdmin';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
+  const { failed, reload } = useDashboardFeatures();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { authEnabled, setPermissions } = useAuth();
   const { propertyId, isPortfolioMode, properties } = useProperty();
@@ -42,7 +46,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-h-screen flex-col lg:ml-60">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex flex-1 flex-col p-3 sm:p-4 lg:p-6">{children}</main>
+        <main className="flex flex-1 flex-col p-3 sm:p-4 lg:p-6">{failed && <div role="alert" className="mb-4 rounded-lg border border-gray-300 bg-white p-4 text-sm"><p>{t('adminFeatures.loadFailed')}</p><button className="mt-2 min-h-[44px] underline" onClick={reload}>{t('adminFeatures.retry')}</button></div>}{children}</main>
       </div>
     </div>
   );
