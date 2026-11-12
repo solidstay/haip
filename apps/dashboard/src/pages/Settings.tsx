@@ -1,3 +1,4 @@
+import { useDashboardFeatures } from '../context/DashboardFeaturesContext';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,11 +25,14 @@ export default function Settings() {
   const { t } = useTranslation();
   const { propertyId } = useProperty();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as Tab) || 'property';
-  const [tab, setTab] = useState<Tab>(
-    TABS.some((t) => t.key === initialTab) ? initialTab : 'property',
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { hasFeature } = useDashboardFeatures();
+  const visibleTabs = TABS.filter(item => !(['users', 'roles'].includes(item.key) && !hasFeature('staff')) && !(item.key === 'webhooks' && !hasFeature('integrations')));
+  const selectedTab = searchParams.get('tab') || 'property';
+  const tab = TABS.some(item => item.key === selectedTab) ? selectedTab : 'property';
+  function setTab(next: Tab) {
+    setSearchParams(previous => { const params = new URLSearchParams(previous); params.set('tab', next); return params; });
+  }
 
   if (!propertyId) {
     return <div className="flex items-center justify-center h-64 text-telivity-mid-grey">{t('settings.selectProperty')}</div>;
@@ -41,8 +45,8 @@ export default function Settings() {
         <h1 className="text-2xl font-semibold text-telivity-navy">{t('settings.title')}</h1>
       </div>
 
-      <div className="flex gap-1 bg-white rounded-xl shadow-sm p-1 mb-4">
-        {TABS.map((tabItem) => (
+      <div className="flex flex-wrap gap-1 bg-white rounded-xl shadow-sm p-1 mb-4">
+        {visibleTabs.map((tabItem) => (
           <button
             key={tabItem.key}
             onClick={() => setTab(tabItem.key)}
@@ -165,6 +169,13 @@ function PropertySettings({ propertyId, queryClient }: { propertyId: string; que
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="mb-8 border-b border-gray-100 pb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <ImageIcon size={16} className="text-telivity-teal" />
+          <h2 className="text-sm font-semibold text-telivity-navy">{t('settings.propertyPhotos')}</h2>
+        </div>
+        <MediaGallery propertyId={propertyId} ownerType="property" ownerId={propertyId} />
+      </div>
       <h2 className="text-sm font-semibold text-telivity-navy mb-4">{t('settings.propertyInformation')}</h2>
       <div className="space-y-4 max-w-xl">
         <div className="grid grid-cols-2 gap-3">
@@ -196,6 +207,8 @@ function PropertySettings({ propertyId, queryClient }: { propertyId: string; que
           <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.checkOutTime')}</label><input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
         </div>
 
+        <details className="border-t border-gray-100 pt-4">
+          <summary className="min-h-[44px] cursor-pointer text-sm font-medium text-telivity-navy">{t('propertyHub.advanced')}</summary>
         <div className="border-t border-gray-100 pt-4 mt-2">
           <h3 className="text-sm font-semibold text-telivity-navy mb-3">{t('settings.guestRegistration')}</h3>
           <p className="text-xs text-telivity-mid-grey mb-3">{t('settings.guestRegistrationDescription')}</p>
@@ -244,19 +257,15 @@ function PropertySettings({ propertyId, queryClient }: { propertyId: string; que
           </div>
         </div>
 
+        </details>
+
         <button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-telivity-teal text-white rounded-lg px-6 py-2 text-sm font-semibold disabled:opacity-50">
           {updateMutation.isPending ? t('settings.saving') : t('settings.saveChanges')}
         </button>
         {updateMutation.isSuccess && <p className="text-sm text-telivity-dark-teal">{t('settings.saved')}</p>}
       </div>
 
-      <div className="mt-8 border-t border-gray-100 pt-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ImageIcon size={16} className="text-telivity-teal" />
-          <h2 className="text-sm font-semibold text-telivity-navy">{t('settings.propertyPhotos')}</h2>
-        </div>
-        <MediaGallery propertyId={propertyId} ownerType="property" ownerId={propertyId} />
-      </div>
+
     </div>
   );
 }

@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { ChevronDown, Menu, LogOut, User, Languages, Search, CircleHelp } from 'lucide-react';
+import { ChevronDown, Menu, LogOut, User, Languages, Search, CircleHelp, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useProperty } from '../../context/PropertyContext';
@@ -19,7 +20,7 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const { propertyId, setPropertyId, properties, isPortfolioMode } = useProperty();
-  const { user, roles, authEnabled, logout } = useAuth();
+  const { user, roles, authEnabled, logout, hasRole } = useAuth();
   const { connected } = useSocket();
   const [open, setOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -167,6 +168,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </button>
 
           <NotificationBell />
+
+          {hasRole('admin') && <Link to="/admin/features" aria-label={t('adminFeatures.administration')} title={t('adminFeatures.administration')}
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-lg px-2 text-sm text-telivity-slate hover:bg-telivity-light-grey">
+            <ShieldCheck size={18} aria-hidden="true" /><span className="hidden xl:inline">{t('adminFeatures.administration')}</span>
+          </Link>}
 
           {authEnabled && user && (
             <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">

@@ -18,7 +18,7 @@ export default function PropertyScopeBoundary({ children }: { children: ReactNod
   const { propertyId, isPortfolioMode } = useProperty();
 
   // Property creation does not require an existing tenant; the page and API enforce admin access.
-  if (pathname.replace(/\/+$/, '') === '/properties/new') return children;
+  if (['/', '/properties', '/properties/new'].includes(pathname.replace(/\/+$/, '') || '/')) return children;
 
   if (propertyId && (!isPortfolioMode || supportsPortfolio(pathname))) return children;
 

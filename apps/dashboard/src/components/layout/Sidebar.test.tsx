@@ -92,6 +92,11 @@ describe('Sidebar', () => {
     );
   });
 
+  it('keeps feature administration out of the staff sidebar even for administrators', () => {
+    renderWithProviders(<Sidebar mobileOpen={false} onClose={() => {}} />);
+    expect(screen.queryByRole('link', { name: 'Admin features' })).not.toBeInTheDocument();
+  });
+
   it('shows HAIP branding', () => {
     renderWithProviders(<Sidebar mobileOpen={false} onClose={() => {}} />);
     expect(screen.getByText('HAIP')).toBeInTheDocument();

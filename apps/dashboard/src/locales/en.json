@@ -1210,7 +1210,9 @@
     "setAsPrimary": "Set as primary",
     "uploadFile": "Upload a file",
     "uploading": "Uploading…",
-    "urlPlaceholder": "Paste an image URL"
+    "urlPlaceholder": "Paste an image URL",
+    "addUrl": "Add an image URL",
+    "urlLabel": "Image URL"
   },
   "nav": {
     "accounting": "Accounting",
@@ -2411,5 +2413,57 @@
     "setupRates": "Set up rates",
     "setupSettings": "Property settings and photos",
     "another": "Add another property"
+  },
+  "adminFeatures": {
+    "title": "Admin features",
+    "description": "Choose the tools shown to all staff across all properties. Staff permissions still apply. Hidden tools keep their data, direct links and background services.",
+    "core": "Always available: properties and photos, rooms, pricing, bookings, enquiries and essential settings.",
+    "adminOnly": "Only an administrator can change the shared menu.",
+    "loading": "Loading admin features…",
+    "loadFailed": "The shared menu settings could not be loaded. Essential tools remain available.",
+    "retry": "Try again",
+    "optional": "Optional admin tools",
+    "essentials": "Use Essentials",
+    "showAll": "Show all tools",
+    "saving": "Saving…",
+    "save": "Save menu",
+    "discard": "Discard changes",
+    "saved": "Menu saved for all staff. Other sessions update within a minute.",
+    "saveFailed": "The menu could not be saved. Your changes are still here; try again.",
+    "features": {
+      "analytics": "Dashboard analytics",
+      "frontDesk": "Front desk",
+      "guests": "Guest directory",
+      "billing": "Folios and billing",
+      "housekeeping": "Housekeeping",
+      "groups": "Groups",
+      "commercial": "Commercial accounts",
+      "cashier": "Cashier",
+      "houseAccounts": "House accounts",
+      "accounting": "Accounting",
+      "tax": "Tax administration",
+      "revenue": "Revenue management",
+      "nightAudit": "Night audit",
+      "reports": "Reports",
+      "channels": "Channels and iCal calendars",
+      "integrations": "Integrations and webhooks",
+      "communications": "Communications",
+      "reviews": "Reviews",
+      "staff": "Staff and roles",
+      "import": "Data import"
+    },
+    "administration": "Administration",
+    "backToStaff": "Back to staff dashboard"
+  },
+  "propertyHub": {
+    "title": "Properties",
+    "description": "Add accommodation, upload photos and prepare it for bookings.",
+    "photos": "Property details & photos",
+    "rooms": "Rooms & room photos",
+    "pricing": "Pricing",
+    "bookings": "Bookings",
+    "empty": "No properties yet. Add your first property to get started.",
+    "noMatches": "No properties match your search.",
+    "advanced": "Advanced property settings"
   }
 }

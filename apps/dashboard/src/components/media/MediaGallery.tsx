@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Star, Trash2, ArrowLeft, ArrowRight, ImagePlus, Upload, Link as LinkIcon } from 'lucide-react';
+import { useState, useRef, useId } from 'react';
+import { Star, Trash2, ArrowLeft, ArrowRight, ImagePlus, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   useMediaList,
@@ -28,6 +28,7 @@ export default function MediaGallery({ propertyId, ownerType, ownerId, canManage
   const { data: config } = useMediaConfig();
   const { addByUrl, upload, remove, setPrimary, reorder } = useMediaMutations(propertyId, ownerType, ownerId);
 
+  const fieldId = useId();
   const [url, setUrl] = useState('');
   const [caption, setCaption] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -103,31 +104,6 @@ export default function MediaGallery({ propertyId, ownerType, ownerId, canManage
 
       {canManage && (
         <div className="mt-4 border-t border-gray-100 pt-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <LinkIcon size={14} className="text-telivity-mid-grey shrink-0" />
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={t('media.urlPlaceholder')}
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal"
-            />
-            <input
-              type="text"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder={t('media.captionPlaceholder')}
-              className="w-40 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal"
-            />
-            <button
-              onClick={submitUrl}
-              disabled={!url.trim() || addByUrl.isPending}
-              className="bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50 shrink-0"
-            >
-              {t('media.add')}
-            </button>
-          </div>
-
           {config?.uploadEnabled && (
             <div>
               <input
@@ -144,12 +120,33 @@ export default function MediaGallery({ propertyId, ownerType, ownerId, canManage
               <button
                 onClick={() => fileRef.current?.click()}
                 disabled={upload.isPending}
-                className="flex items-center gap-2 text-sm text-telivity-slate hover:text-telivity-teal disabled:opacity-50"
+                className="flex min-h-[44px] items-center gap-2 rounded-lg bg-telivity-teal px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 <Upload size={14} /> {upload.isPending ? t('media.uploading') : t('media.uploadFile')}
               </button>
             </div>
           )}
+          <details className="pt-2">
+            <summary className="min-h-[44px] cursor-pointer text-sm text-telivity-slate">{t('media.addUrl')}</summary>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-0 basis-full sm:basis-auto flex-1">
+                <label htmlFor={`${fieldId}-url`} className="mb-2 block text-sm font-medium text-telivity-navy">{t('media.urlLabel')}</label>
+                <input id={`${fieldId}-url`} type="url" value={url} onChange={event => setUrl(event.target.value)}
+                  placeholder={t('media.urlPlaceholder')}
+                  className="min-h-[44px] w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" />
+              </div>
+              <div className="min-w-0 w-full sm:w-40">
+                <label htmlFor={`${fieldId}-caption`} className="mb-2 block text-sm font-medium text-telivity-navy">{t('media.captionPlaceholder')}</label>
+                <input id={`${fieldId}-caption`} type="text" value={caption} onChange={event => setCaption(event.target.value)}
+                  className="min-h-[44px] w-full min-w-0 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" />
+              </div>
+              <button onClick={submitUrl} disabled={!url.trim() || addByUrl.isPending}
+                className="min-h-[44px] bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50 shrink-0">
+                {t('media.add')}
+              </button>
+            </div>
+
+          </details>
           {addByUrl.isError && <p className="text-xs text-red-500">{t('media.couldNotAddImage')}</p>}
         </div>
       )}

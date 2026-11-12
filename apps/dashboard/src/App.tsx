@@ -1,11 +1,16 @@
+import { useDashboardFeatures } from './context/DashboardFeaturesContext';
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import AdminLayout from './components/layout/AdminLayout';
 import AppLayout from './components/layout/AppLayout';
 import PropertyScopeBoundary from './components/layout/PropertyScopeBoundary';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { SkeletonPage } from './components/ui/Skeleton';
 import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
 import { isBookingRequestsUiEnabled } from './lib/bookingRequestsFeature';
+
+const Properties = lazy(() => import('./pages/Properties'));
+const AdminFeatures = lazy(() => import('./pages/AdminFeatures'));
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FrontDesk = lazy(() => import('./pages/FrontDesk'));
@@ -35,6 +40,17 @@ const BookingRequests = lazy(() => import('./pages/BookingRequests'));
 
 export default function App() {
   useRealtimeInvalidation();
+  const { hasFeature } = useDashboardFeatures();
+  const { pathname } = useLocation();
+
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return (
+    <AdminLayout><ErrorBoundary><Suspense fallback={<SkeletonPage />}>
+      <Routes>
+        <Route path="/admin/features" element={<AdminFeatures />} />
+        <Route path="*" element={<Navigate to="/admin/features" replace />} />
+      </Routes>
+    </Suspense></ErrorBoundary></AdminLayout>
+  );
 
   return (
     <AppLayout>
@@ -42,7 +58,8 @@ export default function App() {
         <Suspense fallback={<SkeletonPage />}>
           <PropertyScopeBoundary>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={hasFeature('analytics') ? <Dashboard /> : <Properties />} />
+              <Route path="/properties" element={<Properties />} />
               <Route path="/properties/new" element={<AddProperty />} />
               <Route path="/front-desk" element={<FrontDesk />} />
               {isBookingRequestsUiEnabled() && (

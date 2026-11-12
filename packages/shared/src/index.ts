@@ -379,3 +379,5 @@ export const isFnrhComplete = checkFnrhComplete;
 /** Tier-1 source PMS identifiers for automated migration connectors. */
 export const MIGRATION_SOURCE_PMS = ['mews', 'cloudbeds', 'apaleo', 'ohip'] as const;
 export type MigrationSourcePms = (typeof MIGRATION_SOURCE_PMS)[number];
+
+export * from './dashboard-features.js';

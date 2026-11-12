@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { PropertyProvider } from './context/PropertyContext';
 import { ToastProvider } from './components/ui/Toast';
 import App from './App';
+import { DashboardFeaturesProvider } from './context/DashboardFeaturesContext';
 import './i18n';
 import './index.css';
 
@@ -17,7 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ToastProvider>
           <AuthProvider>
             <PropertyProvider>
-              <App />
+              <DashboardFeaturesProvider><App /></DashboardFeaturesProvider>
             </PropertyProvider>
           </AuthProvider>
         </ToastProvider>

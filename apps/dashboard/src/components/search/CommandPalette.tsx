@@ -1,3 +1,4 @@
+import { useDashboardFeatures } from '../../context/DashboardFeaturesContext';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
@@ -22,6 +23,7 @@ interface CommandPaletteProps {
 }
 
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
+  const { showLink } = useDashboardFeatures();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { propertyId, isPortfolioMode } = useProperty();
@@ -42,7 +44,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     }
   }, [open]);
 
-  const { data: results = [], isFetching } = useQuery({
+  const { data: allResults = [], isFetching } = useQuery({
     queryKey: ['search', debounced, propertyId, isPortfolioMode],
     queryFn: async () => {
       if (!debounced) return [];
@@ -54,6 +56,8 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     },
     enabled: open && debounced.length >= 2 && (!!propertyId || isPortfolioMode),
   });
+
+  const results = allResults.filter(result => showLink(result.href));
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

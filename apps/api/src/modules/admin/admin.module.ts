@@ -1,3 +1,5 @@
+import { DashboardSettingsController } from './dashboard-settings.controller';
+import { DashboardSettingsService } from './dashboard-settings.service';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { AdminController } from './admin.controller';
@@ -10,8 +12,8 @@ import { RolesService } from './roles.service';
  */
 @Module({
   imports: [AuthModule],
-  controllers: [AdminController],
-  providers: [UsersService, RolesService],
+  controllers: [AdminController, DashboardSettingsController],
+  providers: [UsersService, RolesService, DashboardSettingsService],
   exports: [UsersService, RolesService],
 })
 export class AdminModule {}

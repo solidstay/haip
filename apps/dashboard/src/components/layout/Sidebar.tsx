@@ -1,3 +1,4 @@
+import { useDashboardFeatures } from '../../context/DashboardFeaturesContext';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -48,6 +49,7 @@ type NavSection = {
 const NAV_SECTIONS: NavSection[] = [
   {
     items: [
+      { to: '/properties', icon: Building2, labelKey: 'propertyHub.title' },
       { to: '/', icon: LayoutDashboard, labelKey: 'nav.dashboard', permission: 'dashboard.view' },
       { to: '/front-desk', icon: ConciergeBell, labelKey: 'nav.frontDesk', permission: 'frontdesk.access' },
       { to: '/booking-requests', icon: ClipboardList, labelKey: 'nav.bookingRequests', permission: 'reservations.read' },
@@ -81,7 +83,6 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/reviews', icon: MessageSquare, labelKey: 'nav.reviews', permission: 'reviews.manage' },
       { to: '/settings?tab=users', icon: ShieldCheck, labelKey: 'nav.usersRoles', permission: 'admin.users.manage' },
       { to: '/import', icon: Upload, labelKey: 'nav.import', permission: 'settings.manage' },
-      { to: '/properties/new', icon: Building2, labelKey: 'addProperty.title', roles: ['admin'] },
       { to: '/settings', icon: Settings, labelKey: 'nav.settings', permission: 'settings.manage' },
     ],
   },
@@ -105,6 +106,7 @@ function isItemVisible(
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { hasRole, hasPermission } = useAuth();
+  const { hasFeature, showLink } = useDashboardFeatures();
   const { t } = useTranslation();
   const { propertyId, isPortfolioMode, properties } = useProperty();
 
@@ -122,7 +124,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   const visibleSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => isItemVisible(item, hasPermission, hasRole)),
+    items: section.items.filter((item) => isItemVisible(item, hasPermission, hasRole) && showLink(item.to) && (item.to !== '/' || hasFeature('analytics'))),
   })).filter((section) => section.items.length > 0);
 
   return (
