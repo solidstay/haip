@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { DoorOpen, LayoutGrid, List, Plus, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
@@ -348,6 +348,9 @@ function RoomList() {
         <DoorOpen size={24} className="text-telivity-teal" />
         <h1 className="text-2xl font-semibold text-telivity-navy">{t('rooms.title')}</h1>
         <div className="ml-auto flex gap-2">
+          <Link to={`/rooms/types?propertyId=${encodeURIComponent(propertyId)}`} className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey">
+            {t('rooms.roomTypes')}
+          </Link>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden">
             <button onClick={() => setView('rack')} className={`p-2 ${view === 'rack' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><LayoutGrid size={16} /></button>
             <button onClick={() => setView('list')} className={`p-2 ${view === 'list' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><List size={16} /></button>
