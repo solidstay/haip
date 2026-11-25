@@ -5,7 +5,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { and, eq, or, isNull, inArray } from 'drizzle-orm';
+import { and, eq, or, isNull, inArray, exists } from 'drizzle-orm';
 import { users, roles, userRoles, auditLogs } from '@telivityhaip/database';
 import { DRIZZLE } from '../../database/database.module';
 import { PermissionsService } from '../auth/permissions.service';
@@ -31,11 +31,19 @@ export class UsersService {
     return or(isNull(roles.propertyId), eq(roles.propertyId, propertyId));
   }
 
-  async list(propertyId: string) {
+  private membershipScope(propertyId: string) {
+    return or(eq(users.propertyId, propertyId), exists(
+      this.db.select({ id: userRoles.id }).from(userRoles).where(
+        and(eq(userRoles.userId, users.id), eq(userRoles.propertyId, propertyId)),
+      ),
+    ));
+  }
+
+  async list(propertyId: string, includeMembers = false) {
     const userRows = await this.db
       .select()
       .from(users)
-      .where(eq(users.propertyId, propertyId))
+      .where(includeMembers ? this.membershipScope(propertyId) : eq(users.propertyId, propertyId))
       .orderBy(users.name);
 
     const ids = userRows.map((u: { id: string }) => u.id);
@@ -173,8 +181,16 @@ export class UsersService {
     }
   }
 
-  async assignRoles(userId: string, propertyId: string, roleIds: string[], actor?: AuditActor) {
-    await this.getOwned(userId, propertyId);
+  /** Cross-property assignment requires the controller to authorize both scopes. */
+  async assignRoles(userId: string, propertyId: string, roleIds: string[], actor?: AuditActor, sourcePropertyId?: string) {
+    if (sourcePropertyId) {
+      // The identity must already belong to the explicitly authorized source.
+      const [member] = await this.db.select({ id: users.id }).from(users)
+        .where(and(eq(users.id, userId), this.membershipScope(sourcePropertyId))).limit(1);
+      if (!member) throw new NotFoundException(`User ${userId} not found at source property`);
+    } else {
+      await this.getOwned(userId, propertyId);
+    }
     await this.assertRolesExist(roleIds, propertyId);
     await this.db.transaction(async (tx: any) => {
       await tx
@@ -182,7 +198,7 @@ export class UsersService {
         .where(and(eq(userRoles.userId, userId), eq(userRoles.propertyId, propertyId)));
       if (roleIds.length) {
         await tx.insert(userRoles).values(
-          roleIds.map((roleId) => ({ propertyId, userId, roleId })),
+          [...new Set(roleIds)].map((roleId) => ({ propertyId, userId, roleId })),
         );
       }
       await tx.insert(auditLogs).values({
@@ -194,7 +210,8 @@ export class UsersService {
         ...actorFields(actor),
       });
     });
-    return this.effectivePermissions(userId, propertyId);
+    const permissions = await this.permissions.getEffectivePermissions(userId, propertyId);
+    return { userId, propertyId, permissions };
   }
 
   async effectivePermissions(userId: string, propertyId: string) {
