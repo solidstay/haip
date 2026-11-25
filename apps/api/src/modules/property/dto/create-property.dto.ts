@@ -91,9 +91,9 @@ export class CreatePropertyDto {
   @Max(5)
   starRating?: number;
 
-  @ApiProperty({ example: 200 })
+  @ApiProperty({ example: 200, minimum: 0, description: 'Registered room/unit count; zero while inventory setup is pending' })
   @IsInt()
-  @Min(1)
+  @Min(0)
   totalRooms!: number;
 
   @ApiPropertyOptional()

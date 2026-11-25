@@ -16,6 +16,7 @@ import { userCanAccessProperty } from '../auth/property-access';
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { AuditActorCtx, type AuditActor } from '../../common/audit/audit-actor';
 
 @ApiTags('properties')
 @Controller('properties')
@@ -56,8 +57,8 @@ export class PropertyController {
   @Roles('admin')
   @ApiOperation({ summary: 'Create new property' })
   @ApiResponse({ status: 201, description: 'Property created' })
-  createProperty(@Body() dto: CreatePropertyDto) {
-    return this.propertyService.create(dto);
+  createProperty(@Body() dto: CreatePropertyDto, @CurrentUser() user?: AuthUser, @AuditActorCtx() actor?: AuditActor) {
+    return this.propertyService.create(dto, user, actor);
   }
 
   @Patch(':id')
@@ -68,7 +69,8 @@ export class PropertyController {
   updateProperty(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePropertyDto,
+    @AuditActorCtx() actor?: AuditActor,
   ) {
-    return this.propertyService.update(id, dto);
+    return this.propertyService.update(id, dto, actor);
   }
 }

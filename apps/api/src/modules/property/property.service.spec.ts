@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { PermissionsService } from '../auth/permissions.service';
 import { PropertyService } from './property.service';
 
 const dto = { name: 'Test accommodation', code: 'TEST', countryCode: 'GB', currencyCode: 'GBP', timezone: 'Europe/London', totalRooms: 2 };
@@ -10,6 +11,13 @@ function setup() {
   return { service: new PropertyService(db), returning, values };
 }
 describe('Property creation', () => {
+  it('does not create a tenant for an unlinked authenticated administrator', async () => {
+    const db = { insert: vi.fn() };
+    const permissions = { findLocalUser: vi.fn().mockResolvedValue(null) } as unknown as PermissionsService;
+    const service = new PropertyService(db, undefined, permissions);
+    await expect(service.create(dto, { sub: 'subject', email: '', name: '', roles: ['admin'] })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(db.insert).not.toHaveBeenCalled();
+  });
   it('returns the persisted property using the existing schema', async () => {
     const { service, returning, values } = setup();
     returning.mockResolvedValue([{ id: 'new-property', ...dto }]);
