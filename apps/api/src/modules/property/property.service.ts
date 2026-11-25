@@ -1,10 +1,14 @@
-import { Injectable, Inject, Optional, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { eq, inArray } from 'drizzle-orm';
-import { properties, media } from '@telivityhaip/database';
+import { properties, media, roles, rolePermissions, userRoles, auditLogs } from '@telivityhaip/database';
 import { DRIZZLE } from '../../database/database.module';
 import { WebhookService } from '../webhook/webhook.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { PermissionsService } from '../auth/permissions.service';
+import { ROLE_DEFAULT_PERMISSIONS } from '../auth/permissions.catalog';
+import type { AuthUser } from '../auth/current-user.decorator';
+import { actorFields, type AuditActor } from '../../common/audit/audit-actor';
 
 type PropertyRow = Record<string, unknown> & {
   id: string;
@@ -16,10 +20,29 @@ export class PropertyService {
   constructor(
     @Inject(DRIZZLE) private readonly db: any,
     @Optional() private readonly webhookService?: WebhookService,
+    @Optional() private readonly permissions?: PermissionsService,
   ) {}
 
-  async create(dto: CreatePropertyDto) {
+  async create(dto: CreatePropertyDto, creator?: AuthUser, actor?: AuditActor) {
+    // A newly created tenant has no local grants yet. Give only its authenticated
+    // administrator creator the existing admin profile, scoped to this new row.
+    const localUser = creator ? await this.permissions?.findLocalUser(creator.sub, creator.email) : undefined;
+    if (creator && (!creator.roles.includes('admin') || !localUser || localUser.status !== 'active')) {
+      throw new ForbiddenException('An active linked administrator is required to create a property');
+    }
     try {
+      if (localUser) {
+        const property = await this.db.transaction(async (tx: any) => {
+          const [created] = await tx.insert(properties).values(dto).returning();
+          const propertyId = created.id;
+          const [role] = await tx.insert(roles).values({ propertyId, key: 'property_administrator', name: 'Property administrator', isSystem: false }).returning();
+          await tx.insert(rolePermissions).values(ROLE_DEFAULT_PERMISSIONS['admin']!.map(permissionKey => ({ propertyId, roleId: role.id, permissionKey })));
+          await tx.insert(userRoles).values({ propertyId, userId: localUser.id, roleId: role.id });
+          await tx.insert(auditLogs).values({ propertyId, action: 'create', entityType: 'property', entityId: propertyId, description: 'property.created_with_administrator_access', ...actorFields(actor), newValue: { name: dto.name, totalRooms: dto.totalRooms, administratorUserId: localUser.id } });
+          return created;
+        });
+        return await this.withLogoUrl(property as PropertyRow);
+      }
       const [property] = await this.db
         .insert(properties)
         .values(dto)
@@ -55,15 +78,15 @@ export class PropertyService {
     return this.withLogoUrl(property as PropertyRow);
   }
 
-  async update(id: string, dto: UpdatePropertyDto) {
-    const [property] = await this.db
-      .update(properties)
-      .set({ ...dto, updatedAt: new Date() })
-      .where(eq(properties.id, id))
-      .returning();
-    if (!property) {
-      throw new NotFoundException(`Property ${id} not found`);
-    }
+  async update(id: string, dto: UpdatePropertyDto, actor?: AuditActor) {
+    // The properties row is the tenant; retain dependent history on deactivation.
+    const property = await this.db.transaction(async (tx: any) => {
+      const [previous] = await tx.select().from(properties).where(eq(properties.id, id));
+      if (!previous) throw new NotFoundException(`Property ${id} not found`);
+      const [updated] = await tx.update(properties).set({ ...dto, updatedAt: new Date() }).where(eq(properties.id, id)).returning();
+      await tx.insert(auditLogs).values({ propertyId: id, action: 'update', entityType: 'property', entityId: id, description: dto.isActive === false ? 'property.deactivated' : dto.isActive === true ? 'property.activated' : 'property.updated', ...actorFields(actor), previousValue: { isActive: previous.isActive }, newValue: dto });
+      return updated;
+    });
     await this.webhookService?.emit(
       'property.content_updated',
       'property',

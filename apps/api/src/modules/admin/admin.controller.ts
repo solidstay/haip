@@ -11,6 +11,7 @@ import {
   Body,
   Query,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator';
@@ -24,6 +25,8 @@ import { RolesService } from './roles.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AssignRolesDto } from './dto/assign-roles.dto';
+import { AssignPropertyRolesDto } from './dto/assign-property-roles.dto';
+import { userCanAccessProperty } from '../auth/property-access';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { SetRolePermissionsDto } from './dto/set-role-permissions.dto';
@@ -110,6 +113,13 @@ export class AdminController {
     return this.usersService.list(propertyId);
   }
 
+  @Get('property-members')
+  @RequirePermissions('admin.users.manage')
+  @ApiOperation({ summary: 'List home users and cross-property members with roles at this property' })
+  listPropertyMembers(@Query('propertyId', ParseUUIDPipe) propertyId: string) {
+    return this.usersService.list(propertyId, true);
+  }
+
   @Post('users')
   @RequirePermissions('admin.users.manage')
   @ApiOperation({ summary: 'Create a local user' })
@@ -152,6 +162,31 @@ export class AdminController {
     @AuditActorCtx() actor: AuditActor,
   ) {
     return this.usersService.assignRoles(id, propertyId, dto.roleIds, actor);
+  }
+
+  @Put('users/:id/property-roles')
+  @RequirePermissions('admin.users.manage', 'admin.roles.manage')
+  @ApiOperation({ summary: 'Replace role assignments at another property, requiring authority at both properties' })
+  async assignPropertyRoles(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('propertyId', ParseUUIDPipe) propertyId: string,
+    @Body() dto: AssignPropertyRolesDto,
+    @CurrentUser() authUser: AuthUser,
+    @AuditActorCtx() actor: AuditActor,
+  ) {
+    // The global guards authorize the target property. Explicitly authorize the
+    // source property before looking up its user, including for platform admins.
+    if (!authUser || !userCanAccessProperty(authUser, dto.sourcePropertyId)) {
+      throw new ForbiddenException('User management access at the source property is required');
+    }
+    const caller = await this.permissionsService.findLocalUser(authUser.sub, authUser.email);
+    const granted = caller
+      ? await this.permissionsService.getEffectivePermissions(caller.id, dto.sourcePropertyId)
+      : [];
+    if (!granted.includes('admin.users.manage')) {
+      throw new ForbiddenException('User management access at the source property is required');
+    }
+    return this.usersService.assignRoles(id, propertyId, dto.roleIds, actor, dto.sourcePropertyId);
   }
 
   @Get('users/:id/effective-permissions')
