@@ -14,8 +14,8 @@ export default function MediaLibrarySummary({ propertyId }: { propertyId: string
 
   return (
     <Dialog.Root>
-      <section className="flex flex-wrap items-center gap-4" aria-label={t('settings.propertyPhotos')}>
-        <div className="relative flex h-24 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-telivity-light-grey text-telivity-mid-grey">
+      <section className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[128px_minmax(0,1fr)_auto]" aria-label={t('settings.propertyPhotos')}>
+        <div className="relative flex h-24 w-24 sm:w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-telivity-light-grey text-telivity-mid-grey">
           {cover ? <img src={cover.url} alt={cover.altText ?? t('media.coverPhoto')} className="h-full w-full object-cover" /> : <ImageIcon size={24} aria-hidden="true" />}
           {cover?.isPrimary && <span className="absolute bottom-1 left-1 rounded bg-white px-2 py-0.5 text-xs text-telivity-navy">{t('media.primary')}</span>}
         </div>
@@ -26,7 +26,7 @@ export default function MediaLibrarySummary({ propertyId }: { propertyId: string
           </p>
           <p className="mt-1 text-sm text-telivity-mid-grey">{t('media.libraryHint')}</p>
         </div>
-        <Dialog.Trigger className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey">
+        <Dialog.Trigger className="col-span-2 inline-flex min-h-[44px] items-center justify-center sm:col-span-1 gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey">
           <Images size={16} aria-hidden="true" />{canManage ? t('media.managePhotos') : t('media.viewPhotos')}
         </Dialog.Trigger>
       </section>

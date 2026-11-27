@@ -60,6 +60,7 @@ export function PropertyProvider({ children }: { children: ReactNode }) {
     null;
 
   function setPropertyId(id: string) {
+    if (id !== propertyId && !window.dispatchEvent(new CustomEvent('haip:before-property-change', { cancelable: true, detail: { propertyId: id } }))) return;
     setLastPropertyId(id);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);

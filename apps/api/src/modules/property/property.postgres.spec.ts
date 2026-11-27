@@ -35,6 +35,17 @@ describe.skipIf(!url)('property creation on PostgreSQL', () => {
     expect(await service.findAll()).toEqual(expect.arrayContaining([expect.objectContaining({ id: created.id })]));
     expect(await db.select().from(schema.rooms).where(eq(schema.rooms.propertyId, created.id))).toEqual([]);
   });
+  it('serializes simultaneous editor saves and preserves private settings', async () => {
+    const created = await service.create({ ...input(), settings: { privateSetting: 'retained' } });
+    const expectedUpdatedAt = new Date(created.updatedAt as string).toISOString();
+    const results = await Promise.allSettled(['First editor', 'Second editor'].map(description => service.update(created.id, {
+      expectedUpdatedAt, description, publicListing: { houseRules: ['No smoking'], amenities: ['WiFi'], address: null, map: null },
+    })));
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect((results.find(result => result.status === 'rejected') as PromiseRejectedResult).reason).toBeInstanceOf(ConflictException);
+    expect((await service.findById(created.id)).settings).toMatchObject({ privateSetting: 'retained', publicListing: { houseRules: ['No smoking'] } });
+    expect(await db.select().from(schema.auditLogs).where(eq(schema.auditLogs.propertyId, created.id))).toHaveLength(1);
+  });
   it('rejects an existing code without changing the original property', async () => {
     const original = await service.create(input());
     await expect(service.create({ ...input(), name: 'Must not overwrite' })).rejects.toBeInstanceOf(ConflictException);
