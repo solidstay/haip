@@ -1,3 +1,4 @@
+import AccommodationEditor from '../components/property/AccommodationEditor';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Routes, Route, useNavigate } from 'react-router-dom';
@@ -181,6 +182,7 @@ function RoomDetailPanel({
             </div>
           </div>
 
+          <Link to={`/rooms/${room.id}/edit?propertyId=${propertyId}`} className="inline-flex min-h-[44px] items-center font-medium text-telivity-teal underline">Edit unit details</Link>
           {/* Features / amenities */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -540,7 +542,7 @@ function RoomTypeList() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-telivity-teal/5 border-b border-gray-100">
@@ -555,7 +557,7 @@ function RoomTypeList() {
           <tbody>
               {types.map((roomType, i) => (
               <tr key={roomType.id} className={`border-b border-gray-50 ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
-                <td className="px-4 py-3 text-sm font-medium text-telivity-navy">{roomType.name}</td>
+                <td className="px-4 py-3 text-sm font-medium text-telivity-navy"><Link className="inline-flex min-h-[44px] items-center text-telivity-teal underline underline-offset-4" to={`/rooms/types/${roomType.id}?propertyId=${propertyId}`}>{roomType.name}</Link></td>
                 <td className="px-4 py-3 text-sm text-telivity-slate">{roomType.code}</td>
                 <td className="px-4 py-3 text-sm text-telivity-slate">{roomType.maxOccupancy ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-telivity-slate">{roomType.bedType ?? '—'}</td>
@@ -603,6 +605,8 @@ export default function Rooms() {
     <Routes>
       <Route index element={<RoomList />} />
       <Route path="types" element={<RoomTypeList />} />
+      <Route path="types/:id" element={<AccommodationEditor />} />
+      <Route path=":id/edit" element={<AccommodationEditor unit />} />
     </Routes>
   );
 }

@@ -1,3 +1,4 @@
+import { CancellationPolicies, RateTermsEditor } from '../components/property/BookingTermsEditor';
 import { useState } from 'react';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -574,6 +575,7 @@ function RatePlanDetail() {
         </div>
       </div>
 
+      <RateTermsEditor row={plan} propertyId={propertyId} />
       {id && <RestrictionsPanel ratePlanId={id} />}
       {id && propertyId && (
         <RatePlanCalendar
@@ -591,6 +593,7 @@ export default function RatePlans() {
   return (
     <Routes>
       <Route index element={<RatePlanList />} />
+      <Route path="policies" element={<CancellationPolicies />} />
       <Route path=":id" element={<RatePlanDetail />} />
     </Routes>
   );

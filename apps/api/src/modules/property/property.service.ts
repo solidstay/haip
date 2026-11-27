@@ -81,9 +81,16 @@ export class PropertyService {
   async update(id: string, dto: UpdatePropertyDto, actor?: AuditActor) {
     // The properties row is the tenant; retain dependent history on deactivation.
     const property = await this.db.transaction(async (tx: any) => {
-      const [previous] = await tx.select().from(properties).where(eq(properties.id, id));
+      const [previous] = await tx.select().from(properties).where(eq(properties.id, id)).for('update');
       if (!previous) throw new NotFoundException(`Property ${id} not found`);
-      const [updated] = await tx.update(properties).set({ ...dto, updatedAt: new Date() }).where(eq(properties.id, id)).returning();
+      const { expectedUpdatedAt, publicListing, ...fields } = dto;
+      if (expectedUpdatedAt && new Date(previous.updatedAt).toISOString() !== new Date(expectedUpdatedAt).toISOString()) {
+        throw new ConflictException('This property was changed by another user. Reload before saving.');
+      }
+      const changes = { ...fields, ...(publicListing ? { settings: { ...previous.settings, ...fields.settings, publicListing } } : {}) };
+      const [updated] = await tx.update(properties).set({ ...changes, updatedAt: new Date() })
+        .where(eq(properties.id, id)).returning();
+      if (!updated) throw new ConflictException('This property was changed by another user. Reload before saving.');
       await tx.insert(auditLogs).values({ propertyId: id, action: 'update', entityType: 'property', entityId: id, description: dto.isActive === false ? 'property.deactivated' : dto.isActive === true ? 'property.activated' : 'property.updated', ...actorFields(actor), previousValue: { isActive: previous.isActive }, newValue: dto });
       return updated;
     });

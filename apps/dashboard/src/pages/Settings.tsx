@@ -1,11 +1,10 @@
 import { useDashboardFeatures } from '../context/DashboardFeaturesContext';
-import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Settings as SettingsIcon, Building, Link2, Shield, ShieldCheck, Globe } from 'lucide-react';
 import { api } from '../lib/api';
 import { useProperty } from '../context/PropertyContext';
-import MediaLibrarySummary from '../components/media/MediaLibrarySummary';
+import PropertyEditor from '../components/property/PropertyEditor';
 import UserSettings from '../components/admin/UserSettings';
 import RolesSettings from '../components/admin/RolesSettings';
 import BookingEngineSettings from '../components/admin/BookingEngineSettings';
@@ -24,7 +23,6 @@ const TABS: { key: Tab; labelKey: string; icon: typeof Building }[] = [
 export default function Settings() {
   const { t } = useTranslation();
   const { propertyId } = useProperty();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasFeature } = useDashboardFeatures();
   const visibleTabs = TABS.filter(item => !(['users', 'roles'].includes(item.key) && !hasFeature('staff')) && !(item.key === 'webhooks' && !hasFeature('integrations')));
@@ -59,209 +57,11 @@ export default function Settings() {
         ))}
       </div>
 
-      {tab === 'property' && <PropertySettings propertyId={propertyId} queryClient={queryClient} />}
+      {tab === 'property' && <PropertyEditor key={propertyId} propertyId={propertyId} />}
       {tab === 'users' && <UserSettings propertyId={propertyId} />}
       {tab === 'roles' && <RolesSettings propertyId={propertyId} />}
       {tab === 'webhooks' && <WebhookSettings propertyId={propertyId} />}
       {tab === 'booking-engine' && <BookingEngineSettings propertyId={propertyId} />}
-    </div>
-  );
-}
-
-function PropertySettings({ propertyId, queryClient }: { propertyId: string; queryClient: ReturnType<typeof useQueryClient> }) {
-  const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [countryCode, setCountryCode] = useState('US');
-  const [timezone, setTimezone] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [checkInTime, setCheckInTime] = useState('15:00');
-  const [checkOutTime, setCheckOutTime] = useState('11:00');
-  const [staffDisplayName, setStaffDisplayName] = useState('');
-  const [staffLogoMediaId, setStaffLogoMediaId] = useState('');
-  const [staffPrimaryColor, setStaffPrimaryColor] = useState('');
-  const [staffAccentColor, setStaffAccentColor] = useState('');
-  const [occWarnBelow, setOccWarnBelow] = useState('');
-  const [adrWarnBelow, setAdrWarnBelow] = useState('');
-  const [revparWarnBelow, setRevparWarnBelow] = useState('');
-  const [guestRegistrationRequired, setGuestRegistrationRequired] = useState(true);
-  const [minorGuardianIdentificationRequired, setMinorGuardianIdentificationRequired] = useState(true);
-
-  const { data } = useQuery({
-    queryKey: ['properties', propertyId],
-    queryFn: () => api.get(`/v1/properties/${propertyId}`).then((r) => r.data),
-    enabled: !!propertyId,
-  });
-
-  const property = data?.data ?? data;
-
-  useEffect(() => {
-    if (property) {
-      setName(property.name ?? '');
-      setCode(property.code ?? '');
-      setAddress(property.addressLine1 ?? property.address ?? '');
-      setPhone(property.phone ?? '');
-      setEmail(property.email ?? '');
-      setCountryCode(property.countryCode ?? 'US');
-      setTimezone(property.timezone ?? '');
-      setCurrency(property.currencyCode ?? property.currency ?? 'USD');
-      setCheckInTime(property.checkInTime ?? '15:00');
-      setCheckOutTime(property.checkOutTime ?? '11:00');
-      setStaffDisplayName(property.staffDisplayName ?? '');
-      setStaffLogoMediaId(property.staffLogoMediaId ?? '');
-      setStaffPrimaryColor(property.staffPrimaryColor ?? '');
-      setStaffAccentColor(property.staffAccentColor ?? '');
-      setGuestRegistrationRequired(property.guestRegistrationRequired !== false);
-      setMinorGuardianIdentificationRequired(
-        property.guestRegistrationConfig?.minorGuardianIdentificationRequired ??
-        property.settings?.minorGuardianIdentificationRequired !== false
-      );
-      const thr = property.settings?.kpiThresholds ?? {};
-      setOccWarnBelow(thr.occupancyRate?.warnBelow != null ? String(thr.occupancyRate.warnBelow) : '');
-      setAdrWarnBelow(thr.adr?.warnBelow != null ? String(thr.adr.warnBelow) : '');
-      setRevparWarnBelow(thr.revpar?.warnBelow != null ? String(thr.revpar.warnBelow) : '');
-    }
-  }, [property]);
-
-  const updateMutation = useMutation({
-    mutationFn: () => {
-      const kpiThresholds: Record<string, { warnBelow?: number }> = {};
-      if (occWarnBelow !== '') {
-        kpiThresholds.occupancyRate = { warnBelow: Number(occWarnBelow) };
-      }
-      if (adrWarnBelow !== '') {
-        kpiThresholds.adr = { warnBelow: Number(adrWarnBelow) };
-      }
-      if (revparWarnBelow !== '') {
-        kpiThresholds.revpar = { warnBelow: Number(revparWarnBelow) };
-      }
-      return api.patch(`/v1/properties/${propertyId}`, {
-        name,
-        code,
-        addressLine1: address || undefined,
-        phone,
-        email,
-        countryCode: countryCode.toUpperCase(),
-        timezone,
-        currencyCode: currency,
-        checkInTime,
-        checkOutTime,
-        staffDisplayName: staffDisplayName || undefined,
-        staffLogoMediaId: staffLogoMediaId || undefined,
-        staffPrimaryColor: staffPrimaryColor || undefined,
-        staffAccentColor: staffAccentColor || undefined,
-        guestRegistrationRequired,
-        guestRegistrationConfig: {
-          ...(property?.guestRegistrationConfig ?? {}),
-          minorGuardianIdentificationRequired,
-        },
-        settings: {
-          ...(property?.settings ?? {}),
-          kpiThresholds,
-        },
-      });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['properties'] }),
-  });
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="mb-8 border-b border-gray-100 pb-6">
-        <MediaLibrarySummary key={propertyId} propertyId={propertyId} />
-      </div>
-      <h2 className="text-sm font-semibold text-telivity-navy mb-4">{t('settings.propertyInformation')}</h2>
-      <div className="space-y-4 max-w-xl">
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.name')}</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.code')}</label><input type="text" value={code} onChange={(e) => setCode(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-        </div>
-        <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.address')}</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.phone')}</label><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.email')}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-telivity-mid-grey mb-1">País / Country (ISO)</label>
-            <input
-              type="text"
-              maxLength={2}
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
-              placeholder="US"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:border-telivity-teal font-medium"
-            />
-          </div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.timezone')}</label><input type="text" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="America/New_York" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.currency')}</label><input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.checkInTime')}</label><input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.checkOutTime')}</label><input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-        </div>
-
-        <details className="border-t border-gray-100 pt-4">
-          <summary className="min-h-[44px] cursor-pointer text-sm font-medium text-telivity-navy">{t('propertyHub.advanced')}</summary>
-        <div className="border-t border-gray-100 pt-4 mt-2">
-          <h3 className="text-sm font-semibold text-telivity-navy mb-3">{t('settings.guestRegistration')}</h3>
-          <p className="text-xs text-telivity-mid-grey mb-3">{t('settings.guestRegistrationDescription')}</p>
-          <div className="space-y-2.5">
-            <label className="flex items-center gap-2 text-sm text-telivity-navy cursor-pointer">
-              <input
-                type="checkbox"
-                checked={guestRegistrationRequired}
-                onChange={(e) => setGuestRegistrationRequired(e.target.checked)}
-                className="rounded border-gray-300 text-telivity-teal focus:ring-telivity-teal"
-              />
-              {t('settings.requireRegistrationCard')}
-            </label>
-            <label className="flex items-center gap-2 text-sm text-telivity-navy cursor-pointer">
-              <input
-                type="checkbox"
-                checked={minorGuardianIdentificationRequired}
-                onChange={(e) => setMinorGuardianIdentificationRequired(e.target.checked)}
-                className="rounded border-gray-300 text-telivity-teal focus:ring-telivity-teal"
-              />
-              {t('settings.minorGuardianIdentificationRequired')}
-            </label>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100 pt-4 mt-2">
-          <h3 className="text-sm font-semibold text-telivity-navy mb-3">{t('settings.staffDashboardBranding')}</h3>
-          <p className="text-xs text-telivity-mid-grey mb-3">{t('settings.staffDashboardBrandingDescription')}</p>
-          <div className="space-y-3">
-            <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.displayName')}</label><input type="text" value={staffDisplayName} onChange={(e) => setStaffDisplayName(e.target.value)} placeholder={t('settings.displayNamePlaceholder')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-            <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.logoMediaId')}</label><input type="text" value={staffLogoMediaId} onChange={(e) => setStaffLogoMediaId(e.target.value)} placeholder={t('settings.logoMediaIdPlaceholder')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal font-mono text-xs" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.primaryColor')}</label><input type="text" value={staffPrimaryColor} onChange={(e) => setStaffPrimaryColor(e.target.value)} placeholder="#016491" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-              <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.accentColor')}</label><input type="text" value={staffAccentColor} onChange={(e) => setStaffAccentColor(e.target.value)} placeholder="#06bdb4" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100 pt-4 mt-2">
-          <h3 className="text-sm font-semibold text-telivity-navy mb-3">{t('settings.kpiWarningThresholds')}</h3>
-          <p className="text-xs text-telivity-mid-grey mb-3">{t('settings.kpiWarningThresholdsDescription')}</p>
-          <div className="grid grid-cols-3 gap-3">
-            <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.occupancyWarnBelow')}</label><input type="number" step="0.01" min="0" max="1" value={occWarnBelow} onChange={(e) => setOccWarnBelow(e.target.value)} placeholder="0.60" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-            <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.adrWarnBelow')}</label><input type="number" step="0.01" value={adrWarnBelow} onChange={(e) => setAdrWarnBelow(e.target.value)} placeholder="150" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-            <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('settings.revparWarnBelow')}</label><input type="number" step="0.01" value={revparWarnBelow} onChange={(e) => setRevparWarnBelow(e.target.value)} placeholder="100" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          </div>
-        </div>
-
-        </details>
-
-        <button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-telivity-teal text-white rounded-lg px-6 py-2 text-sm font-semibold disabled:opacity-50">
-          {updateMutation.isPending ? t('settings.saving') : t('settings.saveChanges')}
-        </button>
-        {updateMutation.isSuccess && <p className="text-sm text-telivity-dark-teal">{t('settings.saved')}</p>}
-      </div>
-
-
     </div>
   );
 }
