@@ -1,3 +1,5 @@
+import RoomDetails from '../components/rooms/RoomDetails';
+import { control, Field, errorMessage } from '../components/property/PropertyEditor';
 import CleaningFeeEditor from '../components/property/CleaningFeeEditor';
 import AccommodationEditor from '../components/property/AccommodationEditor';
 import { useState, useMemo } from 'react';
@@ -5,13 +7,10 @@ import { useTranslation } from 'react-i18next';
 import { Link, Routes, Route, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { DoorOpen, LayoutGrid, List, Plus, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { DoorOpen, LayoutGrid, List, Plus, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { api } from '../lib/api';
-import { moneyString, requirePropertyId } from '../lib/api-helpers';
 import { useProperty } from '../context/PropertyContext';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../components/ui/Toast';
-import { useMediaList } from '../hooks/useMedia';
 import StatusBadge from '../components/ui/StatusBadge';
 import RoomCard from '../components/rooms/RoomCard';
 import Modal from '../components/ui/Modal';
@@ -52,191 +51,6 @@ interface StatusCount {
   count: number;
 }
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  vacant_dirty: ['clean'],
-  clean: ['inspected', 'out_of_order', 'out_of_service'],
-  inspected: ['guest_ready', 'out_of_order'],
-  guest_ready: ['occupied', 'out_of_order', 'out_of_service'],
-  occupied: ['vacant_dirty'],
-  out_of_order: ['vacant_dirty'],
-  out_of_service: ['vacant_dirty'],
-};
-
-// ---- Room Detail Slide-Over ----
-function RoomDetailPanel({
-  room,
-  propertyId,
-  diary,
-  onClose,
-  onTransition,
-  transitioning,
-}: {
-  room: Room;
-  propertyId: string;
-  diary?: RoomDiaryEntry;
-  onClose: () => void;
-  onTransition: (newStatus: string) => void;
-  transitioning: boolean;
-}) {
-  const { t } = useTranslation();
-  const { hasRole } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  // Mirror each backend route's authorization so we never show controls that
-  // would 403: PATCH /rooms/:id allows admin/front_desk/housekeeping_manager,
-  // but every media route is admin-only. In the demo (auth off) hasRole
-  // returns true so admins see all editing controls.
-  const canManageAmenities = hasRole('admin', 'general_manager', 'front_desk', 'housekeeping_manager');
-  const canManagePhotos = hasRole('admin');
-
-  // Main photo: the room's own primary, falling back to the room type's primary
-  // (rooms usually inherit their type's photos rather than having their own).
-  const { data: roomMedia = [] } = useMediaList(propertyId, 'room', room.id);
-  const { data: typeMedia = [] } = useMediaList(propertyId, 'room_type', room.roomTypeId);
-  const primaryImage =
-    roomMedia.find((m) => m.isPrimary) ?? roomMedia[0] ??
-    typeMedia.find((m) => m.isPrimary) ?? typeMedia[0] ?? null;
-
-  const [amenities, setAmenities] = useState<string[]>(room.amenities ?? []);
-  const [newAmenity, setNewAmenity] = useState('');
-  const [photosOpen, setPhotosOpen] = useState(false);
-  const dirty = JSON.stringify(amenities) !== JSON.stringify(room.amenities ?? []);
-
-  const saveAmenities = useMutation({
-    mutationFn: () => api.patch(`/v1/rooms/${room.id}`, { amenities }, { params: { propertyId } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      toast('success', t('rooms.featuresUpdated'));
-    },
-  });
-
-  const addAmenity = () => {
-    const v = newAmenity.trim().toLowerCase().replace(/\s+/g, '_');
-    if (v && !amenities.includes(v)) setAmenities([...amenities, v]);
-    setNewAmenity('');
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white shadow-xl overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-lg font-semibold text-telivity-navy">{t('rooms.roomNumber', { number: room.number })}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-telivity-light-grey"><X size={18} /></button>
-        </div>
-        <div className="p-6 space-y-5">
-          {/* Main photo */}
-          <div className="relative">
-            {primaryImage ? (
-              <img
-                src={primaryImage.url}
-                alt={primaryImage.altText ?? t('rooms.roomNumber', { number: room.number })}
-                className="w-full h-40 object-cover rounded-xl border border-gray-100"
-              />
-            ) : (
-              <div className="w-full h-40 rounded-xl border border-dashed border-gray-200 bg-telivity-light-grey/40 flex flex-col items-center justify-center text-telivity-mid-grey">
-                <ImageIcon size={28} />
-                <span className="text-xs mt-1">{t('rooms.noPhoto')}</span>
-              </div>
-            )}
-            {canManagePhotos && (
-              <button
-                onClick={() => setPhotosOpen(true)}
-                className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-white/90 backdrop-blur text-telivity-slate text-xs font-medium rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-white"
-              >
-                <ImageIcon size={13} /> {t('rooms.managePhotos')}
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <StatusBadge status={room.status} label={t(`dashboard.roomStatuses.${room.status}`, { defaultValue: room.status })} />
-            {room.isAccessible && <StatusBadge status="info" label="ADA" />}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><p className="text-xs text-telivity-mid-grey">{t('rooms.type')}</p><p className="text-sm font-medium">{room.roomTypeName ?? '—'}</p></div>
-            <div><p className="text-xs text-telivity-mid-grey">{t('rooms.floor')}</p><p className="text-sm font-medium">{room.floor ?? '—'}</p></div>
-            <div><p className="text-xs text-telivity-mid-grey">{t('rooms.building')}</p><p className="text-sm font-medium">{room.building ?? '—'}</p></div>
-            <div><p className="text-xs text-telivity-mid-grey">{t('rooms.guest')}</p><p className="text-sm font-medium">{diary?.guestName ?? room.guestName ?? t('rooms.none')}</p></div>
-            {diary && (
-              <div className="col-span-2">
-                <p className="text-xs text-telivity-mid-grey">{t('rooms.diaryStay')}</p>
-                <p className="text-sm font-medium">{diary.arrivalDate} → {diary.departureDate}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Status Transitions */}
-          <div>
-            <p className="text-xs font-medium text-telivity-mid-grey mb-2">{t('rooms.changeStatus')}</p>
-            <div className="flex flex-wrap gap-2">
-              {(VALID_TRANSITIONS[room.status] ?? []).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onTransition(s)}
-                  disabled={transitioning}
-                  className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium hover:border-telivity-teal hover:bg-telivity-teal/5 transition-colors disabled:opacity-50"
-                >
-                  → {t(`dashboard.roomStatuses.${s}`, { defaultValue: s.replace(/_/g, ' ') })}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <Link to={`/rooms/${room.id}/edit?propertyId=${propertyId}`} className="inline-flex min-h-[44px] items-center font-medium text-telivity-teal underline">Edit unit details</Link>
-          {/* Features / amenities */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-telivity-mid-grey">{t('rooms.features')}</p>
-              {canManageAmenities && dirty && (
-                <button
-                  onClick={() => saveAmenities.mutate()}
-                  disabled={saveAmenities.isPending}
-                  className="text-xs font-semibold text-telivity-teal hover:text-telivity-light-teal disabled:opacity-50"
-                >
-                  {saveAmenities.isPending ? t('common.saving') : t('common.save')}
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {amenities.map((f) => (
-                <span key={f} className="inline-flex items-center gap-1 bg-telivity-light-grey text-telivity-slate text-xs rounded-lg px-2 py-1">
-                  {f}
-                  {canManageAmenities && (
-                    <button onClick={() => setAmenities(amenities.filter((a) => a !== f))} className="text-telivity-mid-grey hover:text-telivity-orange" aria-label={`Remove ${f}`}>
-                      <X size={11} />
-                    </button>
-                  )}
-                </span>
-              ))}
-              {amenities.length === 0 && <span className="text-xs text-telivity-mid-grey">{t('rooms.noFeatures')}</span>}
-            </div>
-            {canManageAmenities && (
-              <div className="flex gap-2 mt-2">
-                <input
-                  type="text"
-                  value={newAmenity}
-                  onChange={(e) => setNewAmenity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAmenity(); } }}
-                  placeholder={t('rooms.addFeature')}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-telivity-teal"
-                />
-                <button onClick={addAmenity} disabled={!newAmenity.trim()} className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-medium hover:border-telivity-teal disabled:opacity-50">{t('common.add')}</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {canManagePhotos && (
-        <Modal open={photosOpen} onClose={() => setPhotosOpen(false)} title={t('rooms.photosForRoom', { number: room.number })}>
-          <MediaGallery propertyId={propertyId} ownerType="room" ownerId={room.id} canManage={canManagePhotos} />
-        </Modal>
-      )}
-    </div>
-  );
-}
-
 // ---- Room List / Rack ----
 function RoomList() {
   const { t } = useTranslation();
@@ -244,11 +58,14 @@ function RoomList() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [view, setView] = useState<'rack' | 'list'>('rack');
-  const [detailRoom, setDetailRoom] = useState<Room | null>(null);
+  const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const openRoom = (id: string) => navigate(`/rooms/${id}?propertyId=${propertyId}`);
   const [createOpen, setCreateOpen] = useState(false);
   const [newRoomNumber, setNewRoomNumber] = useState('');
-  const [newRoomType, setNewRoomType] = useState('');
-  const [newFloor, setNewFloor] = useState('1');
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newCapacity, setNewCapacity] = useState('');
+  const [newFloor, setNewFloor] = useState('');
 
   const { data: discrepanciesData } = useQuery({
     queryKey: ['rooms', 'discrepancies', propertyId, today],
@@ -311,22 +128,15 @@ function RoomList() {
     return map;
   }, [diaryData]);
 
-  const statusMutation = useMutation({
-    mutationFn: ({ roomId, newStatus }: { roomId: string; newStatus: string }) =>
-      api.patch(`/v1/rooms/${roomId}/status`, { status: newStatus }, { params: { propertyId } }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      setDetailRoom(null);
-    },
-  });
-
   const createMutation = useMutation({
-    mutationFn: () =>
-      api.post('/v1/rooms', { propertyId, number: newRoomNumber, roomTypeId: newRoomType, floor: newFloor }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    mutationFn: () => api.post('/v1/rooms/individual', {
+      propertyId, name: newRoomName.trim(), number: newRoomNumber.trim(),
+      maxOccupancy: Number(newCapacity), ...(newFloor ? { floor: newFloor } : {}),
+    }),
+    onSuccess: async response => {
+      await queryClient.invalidateQueries({ queryKey: ['rooms'] });
       setCreateOpen(false);
-      setNewRoomNumber('');
+      openRoom((response.data.data ?? response.data).id);
     },
   });
 
@@ -347,16 +157,13 @@ function RoomList() {
         <DoorOpen size={24} className="text-telivity-teal" />
         <h1 className="text-2xl font-semibold text-telivity-navy">{t('rooms.title')}</h1>
         <div className="ml-auto flex flex-wrap gap-2">
-          <Link to={`/rooms/types?propertyId=${encodeURIComponent(propertyId)}`} className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey">
-            {t('rooms.roomTypes')}
-          </Link>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden">
             <button aria-label={t('rooms.cardView', { defaultValue: 'Card view' })} aria-pressed={view === 'rack'} onClick={() => setView('rack')} className={`p-3 ${view === 'rack' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><LayoutGrid size={16} /></button>
             <button aria-label={t('rooms.listView', { defaultValue: 'List view' })} aria-pressed={view === 'list'} onClick={() => setView('list')} className={`p-3 ${view === 'list' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><List size={16} /></button>
           </div>
-          <button onClick={() => setCreateOpen(true)} className="flex items-center gap-2 bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-telivity-light-teal transition-colors">
+          {hasPermission('ops.manage') && <button onClick={() => { createMutation.reset(); setCreateOpen(true); }} className="flex items-center gap-2 bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-telivity-light-teal transition-colors">
             <Plus size={16} /> {t('rooms.addRoom')}
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -408,7 +215,7 @@ function RoomList() {
                     roomType={typesById.get(room.roomTypeId)}
                     propertyId={propertyId}
                     diary={diaryByRoomId.get(room.id)}
-                    onOpen={() => setDetailRoom(room)}
+                    onOpen={() => openRoom(room.id)}
                   />
                 ))}
               </div>
@@ -427,7 +234,7 @@ function RoomList() {
             <thead>
               <tr className="bg-telivity-teal/5 border-b border-gray-100">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">{t('rooms.roomNumberHeader')}</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">{t('rooms.type')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">Room name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">{t('rooms.floor')}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">{t('common.status')}</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-telivity-slate uppercase">{t('rooms.guest')}</th>
@@ -439,9 +246,9 @@ function RoomList() {
               {rooms.map((r, i) => {
                 const diary = diaryByRoomId.get(r.id);
                 return (
-                <tr key={r.id} onClick={() => setDetailRoom(r)} className={`border-b border-gray-50 cursor-pointer hover:bg-telivity-light-grey/50 ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
+                <tr key={r.id} onClick={() => openRoom(r.id)} className={`border-b border-gray-50 cursor-pointer hover:bg-telivity-light-grey/50 ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-4 py-3 text-sm font-medium text-telivity-navy">{r.number}</td>
-                  <td className="px-4 py-3 text-sm text-telivity-slate">{r.roomTypeName ?? '—'}</td>
+                  <td className="px-4 py-3 text-sm text-telivity-slate"><Link to={`/rooms/${r.id}?propertyId=${propertyId}`} className="font-medium text-telivity-teal">{r.roomTypeName ?? 'View room'}</Link></td>
                   <td className="px-4 py-3 text-sm text-telivity-slate">{r.floor ?? '—'}</td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} label={t(`dashboard.roomStatuses.${r.status}`, { defaultValue: r.status })} /></td>
                   <td className="px-4 py-3 text-sm text-telivity-slate">{diary?.guestName ?? r.guestName ?? '—'}</td>
@@ -457,41 +264,16 @@ function RoomList() {
         </div>
       )}
 
-      {/* Room Detail Slide-Over */}
-      {detailRoom && (
-        <RoomDetailPanel
-          key={detailRoom.id}
-          room={detailRoom}
-          propertyId={propertyId}
-          diary={diaryByRoomId.get(detailRoom.id)}
-          onClose={() => setDetailRoom(null)}
-          onTransition={(s) => statusMutation.mutate({ roomId: detailRoom.id, newStatus: s })}
-          transitioning={statusMutation.isPending}
-        />
-      )}
-
-      {/* Create Room Modal */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('rooms.addRoom')}>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('rooms.roomNumberHeader')} *</label>
-            <input type="text" value={newRoomNumber} onChange={(e) => setNewRoomNumber(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('rooms.roomType')} *</label>
-            <select value={newRoomType} onChange={(e) => setNewRoomType(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal">
-              <option value="">{t('rooms.selectType')}</option>
-              {types.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.code})</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('rooms.floor')}</label>
-            <input type="number" value={newFloor} onChange={(e) => setNewFloor(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" />
-          </div>
-          <button onClick={() => createMutation.mutate()} disabled={!newRoomNumber || !newRoomType || createMutation.isPending} className="w-full bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
-            {createMutation.isPending ? t('common.creating') : t('rooms.createRoom')}
-          </button>
-        </div>
+      <Modal open={createOpen} onClose={() => { if (!createMutation.isPending) setCreateOpen(false); }} title="Add room">
+        <form className="space-y-4" onSubmit={event => { event.preventDefault(); createMutation.mutate(); }}>
+          <Field label="Room name"><input className={control} required maxLength={100} value={newRoomName} onChange={e => setNewRoomName(e.target.value)} /></Field>
+          <Field label="Room number / label"><input className={control} required maxLength={20} value={newRoomNumber} onChange={e => setNewRoomNumber(e.target.value)} /></Field>
+          <Field label="Maximum guests"><input className={control} type="number" required min={1} step={1} value={newCapacity} onChange={e => setNewCapacity(e.target.value)} /></Field>
+          <Field label="Floor (optional)"><input className={control} maxLength={10} value={newFloor} onChange={e => setNewFloor(e.target.value)} /></Field>
+          <p className="text-sm text-telivity-slate">Creates one individually advertised room. Add its photos, details and rates on the next page.</p>
+          {createMutation.isError && <p role="alert" className="text-sm text-red-700">{errorMessage(createMutation.error)}</p>}
+          <button disabled={!newRoomNumber.trim() || !newRoomName.trim() || !newCapacity || createMutation.isPending} className="min-h-[44px] w-full rounded-lg bg-telivity-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{createMutation.isPending ? 'Creating…' : 'Create room'}</button>
+        </form>
       </Modal>
     </div>
   );
@@ -608,6 +390,7 @@ export default function Rooms() {
       <Route path="types" element={<RoomTypeList />} />
       <Route path="types/:id/cleaning-fee" element={<CleaningFeeEditor />} />
       <Route path="types/:id" element={<AccommodationEditor />} />
+      <Route path=":id" element={<RoomDetails />} />
       <Route path=":id/edit" element={<AccommodationEditor unit />} />
     </Routes>
   );

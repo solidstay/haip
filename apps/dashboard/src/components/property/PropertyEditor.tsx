@@ -348,7 +348,7 @@ function PropertyForm({
           </Field>
           <Field
             label="Property amenities"
-            hint="One amenity per line. Accommodation-specific amenities are managed under Room types."
+            hint="One amenity per line. Room-specific amenities are managed under Rooms."
           >
             <textarea
               className={control}
@@ -571,8 +571,7 @@ function PropertyForm({
         >
           <div className="grid gap-x-6 sm:grid-cols-2">
             {[
-              ['/rooms/types', 'Room types, beds & amenities'],
-              ['/rooms', 'Physical units & unit photos'],
+              ['/rooms', 'Rooms, photos & amenities'],
               ['/rate-plans', 'Rates & stay restrictions'],
               ['/rate-plans/policies', 'Cancellation policies'],
               ['/channels/ical', 'Calendar connections'],

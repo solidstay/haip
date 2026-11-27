@@ -7,8 +7,9 @@ import { api } from '../../lib/api';
 import { control, Field, errorMessage } from './PropertyEditor';
 import { useUnsavedChanges } from './useUnsavedChanges';
 
-export default function CleaningFeeEditor() {
-  const { id } = useParams();
+export default function CleaningFeeEditor({ roomTypeId, embedded = false }: { roomTypeId?: string; embedded?: boolean } = {}) {
+  const { id: routeId } = useParams();
+  const id = roomTypeId ?? routeId;
   const { propertyId, currencyCode } = useProperty();
   const query = useQuery({
     queryKey: ['cleaning-fee', propertyId, id],
@@ -25,11 +26,11 @@ export default function CleaningFeeEditor() {
   if (query.isError) return <p role="alert">Could not load the cleaning fee. <button className="underline" onClick={() => query.refetch()}>Try again</button></p>;
   if (!query.data) return <p role="status">Loading cleaning fee…</p>;
   return <CleaningFeeForm key={`${propertyId}:${id}`} id={id!} propertyId={propertyId}
-    name={query.data.room.name} initial={query.data.fee} currency={currencyCode} />;
+    name={query.data.room.name} initial={query.data.fee} currency={currencyCode} embedded={embedded} />;
 }
 
-export function CleaningFeeForm({ id, propertyId, name, initial, currency }: {
-  id: string; propertyId: string; name: string;
+export function CleaningFeeForm({ id, propertyId, name, initial, currency, embedded = false }: {
+  id: string; propertyId: string; name: string; embedded?: boolean;
   initial: { amount: string; currencyCode: string | null }; currency: string | null;
 }) {
   const { hasPermission } = useAuth();
@@ -50,11 +51,14 @@ export function CleaningFeeForm({ id, propertyId, name, initial, currency }: {
     } catch (error) { setError(errorMessage(error)); }
     finally { setSaving(false); }
   }
-  return <div className="max-w-2xl">
+  return <div className={embedded ? undefined : "max-w-2xl"}>
+    {!embedded && <>
     <Link className="mb-4 inline-flex min-h-[44px] items-center text-telivity-teal" to={`/rooms/types/${id}?propertyId=${propertyId}`}>Back to accommodation</Link>
     <h1 className="mb-2 text-2xl font-semibold text-telivity-navy">Cleaning fee</h1>
     <p className="mb-6 break-words text-telivity-slate">{name}</p>
+    </>}
     <form onSubmit={save} className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      {embedded && <h2 className="mb-4 text-lg font-semibold text-telivity-navy">Cleaning fee</h2>}
       <p className="mb-6 text-sm text-telivity-slate">A fixed charge once per stay, included in direct-booking totals. Set the amount to 0 to remove it. Existing accepted bookings keep their agreed price.</p>
       <fieldset disabled={saving || !canManage} className="grid gap-4 sm:grid-cols-2">
         <Field label="Cleaning fee amount"><input className={control} type="number" min="0" max="9999999999.99" step="0.01" required value={amount} onChange={e => { setAmount(e.target.value); setDirty(true); setSaved(false); }} /></Field>

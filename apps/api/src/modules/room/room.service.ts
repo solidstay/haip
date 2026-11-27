@@ -1,6 +1,8 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, and, inArray, sql } from 'drizzle-orm';
-import { rooms, roomTypes, reservations } from '@telivityhaip/database';
+import { rooms, roomTypes, reservations, properties, auditLogs } from '@telivityhaip/database';
+import { randomUUID } from 'node:crypto';
+import { CreateIndividualRoomDto } from './dto/create-individual-room.dto';
 import { DRIZZLE } from '../../database/database.module';
 import { CreateRoomTypeDto } from './dto/create-room-type.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -124,6 +126,33 @@ export class RoomService {
   }
 
   // --- Rooms ---
+
+  async createIndividualRoom(dto: CreateIndividualRoomDto) {
+    return this.db.transaction(async (tx: any) => {
+      // Serialize this workflow per property, including duplicate submissions.
+      const [property] = await tx.select({ id: properties.id }).from(properties)
+        .where(eq(properties.id, dto.propertyId)).for('update');
+      if (!property) throw new NotFoundException('Property not found');
+      const number = dto.number.trim();
+      const [duplicate] = await tx.select({ id: rooms.id }).from(rooms)
+        .where(and(eq(rooms.propertyId, dto.propertyId), eq(rooms.number, number)));
+      if (duplicate) throw new BadRequestException('A room with this number / label already exists.');
+      const [type] = await tx.insert(roomTypes).values({
+        propertyId: dto.propertyId, name: dto.name.trim(), code: randomUUID().slice(0, 20),
+        maxOccupancy: dto.maxOccupancy, defaultOccupancy: dto.maxOccupancy, floor: dto.floor,
+      }).returning();
+      const [room] = await tx.insert(rooms).values({
+        propertyId: dto.propertyId, roomTypeId: type.id, number, floor: dto.floor,
+      }).returning();
+      await tx.insert(auditLogs).values([
+        { propertyId: dto.propertyId, action: 'create', entityType: 'room_type',
+          entityId: type.id, description: 'room_type.created', newValue: type },
+        { propertyId: dto.propertyId, action: 'create', entityType: 'room',
+          entityId: room.id, description: 'room.created', newValue: room },
+      ]);
+      return room;
+    });
+  }
 
   async createRoom(dto: CreateRoomDto) {
     // FK ownership (security audit #5): verify the caller's roomTypeId belongs

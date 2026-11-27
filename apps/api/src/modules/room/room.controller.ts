@@ -17,6 +17,7 @@ import { RoomStatusService } from './room-status.service';
 import { RoomDiscrepancyService } from './room-discrepancy.service';
 import { CreateRoomTypeDto } from './dto/create-room-type.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
+import { CreateIndividualRoomDto } from './dto/create-individual-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { UpdateRoomTypeDto } from './dto/update-room-type.dto';
 import { UpdateRoomStatusDto } from './dto/update-room-status.dto';
@@ -200,6 +201,17 @@ export class RoomController {
   }
 
   // --- Room routes ---
+
+  @Post('individual')
+  @RequirePermissions('ops.manage')
+  @ApiOperation({ summary: 'Create an individually advertised room and its listing together' })
+  @ApiResponse({ status: 201, description: 'Room and listing created atomically' })
+  createIndividualRoom(@Body() dto: CreateIndividualRoomDto,
+    @Query('propertyId', new ParseUUIDPipe({ optional: true })) queryPropertyId?: string) {
+    // The scope guard checks query before body: reject contradictory scopes.
+    dto.propertyId = resolvePropertyId({ body: dto.propertyId, query: queryPropertyId });
+    return this.roomService.createIndividualRoom(dto);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get all rooms for a property' })
