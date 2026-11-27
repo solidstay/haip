@@ -1,3 +1,4 @@
+import { EmailLayout } from './email-layout';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   EmailMessage,
@@ -22,6 +23,7 @@ const EMAIL_SEND_RETRY_BASE_DELAY_MS = 250;
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+  private readonly layout = new EmailLayout();
 
   constructor(@Inject(EMAIL_PROVIDERS) private readonly providers: EmailProvider[]) {}
 
@@ -31,11 +33,12 @@ export class EmailService {
 
   async send(message: EmailMessage, options?: EmailSendOptions): Promise<EmailResult> {
     const provider = this.activeProvider();
+    const presented = this.layout.render(message);
     const maxAttempts = Math.max(1, Math.floor(options?.maxAttempts ?? DEFAULT_EMAIL_SEND_MAX_ATTEMPTS));
     let lastResult: EmailResult | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const raw = await provider.send(message, options);
+      const raw = await provider.send(presented, options);
       lastResult = raw.provider ? raw : { ...raw, provider: provider.name };
 
       if (lastResult.status !== 'notSent' || attempt === maxAttempts) {

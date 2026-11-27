@@ -27,3 +27,18 @@ SMTP variables (`SMTP_*`) remain supported as a fallback when SendGrid is not se
 SendGrid delivery events can be wired to HAIP webhooks in a later wave; this adapter covers outbound send only.
 
 See also: [Integration catalog](../INTEGRATIONS.md) — **SendGrid**.
+
+### Optional installation email layout
+
+Set `EMAIL_LAYOUT_PATH` to a UTF-8 HTML file in the API container to wrap email
+fragments in an operator-owned layout. It must contain exactly one `{{body}}`
+placeholder and at least one `{{subject}}` placeholder, and be at most 100 KB.
+The subject is HTML-escaped. The body is the already rendered HTML supplied by
+the caller; this option does not sanitize caller HTML. Place the body placeholder
+in an HTML content position, never in an attribute or script. No template code is
+evaluated. Invalid or unreadable configured files fail at service startup.
+
+The file is read once at startup. With no path configured, behavior is unchanged.
+Messages already containing an `<html>` document are left intact. Recipients,
+subjects, plain text, stable message identity and delivery/retry behavior remain
+unchanged. Keep installation branding outside this repository.

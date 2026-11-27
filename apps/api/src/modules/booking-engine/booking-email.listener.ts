@@ -34,9 +34,16 @@ export class BookingEmailListener {
         .innerJoin(bookings, eq(bookings.id, reservations.bookingId)).innerJoin(guests, eq(guests.id, reservations.guestId)).innerJoin(properties, eq(properties.id, reservations.propertyId))
         .where(and(eq(reservations.id, event.entityId), eq(reservations.propertyId, event.propertyId)));
       if (!row?.guest.email || row.booking.channelCode !== 'booking_engine' || (manualOnly && !row.reservation.holdExpiresAt)) return;
-      const staging = process.env['STRIPE_MODE'] === 'mock' ? 'STAGING: synthetic accommodation; no real payment.\n\n' : '';
+      const staging = process.env['STRIPE_MODE'] === 'mock' ? 'STAGING: test booking; no real payment.\n\n' : '';
       const text = `${staging}${subject}\n${row.property.name}\n${row.reservation.arrivalDate} to ${row.reservation.departureDate}\n${row.reservation.currencyCode} ${row.reservation.totalAmount}\nConfirmation: ${row.booking.confirmationNumber}\n${row.reservation.holdExpiresAt ? `Unpaid hold expires: ${row.reservation.holdExpiresAt.toISOString()}` : ''}`;
-      await this.email.send({ to: row.guest.email, subject: `${staging ? '[STAGING] ' : ''}${subject}`, text, html: `<p>${escape(text).replaceAll('\n', '<br>')}</p>` });
+      const detail = (label: string, value: string) => `<tr><td style="padding:10px 16px 10px 0;color:#62626a;font-size:14px;vertical-align:top">${label}</td><td style="padding:10px 0;font-size:14px;font-weight:600;vertical-align:top">${escape(value)}</td></tr>`;
+      const html = `${staging ? `<p style="font-size:14px;line-height:1.6">${escape(staging.trim())}</p>` : ''}
+        <h2 style="font-size:20px;line-height:1.4;margin:0 0 18px">${escape(row.property.name)}</h2>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" bgcolor="#f5f5f7" style="border-radius:12px"><tr><td style="padding:22px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${detail('Check-in', row.reservation.arrivalDate)}${detail('Check-out', row.reservation.departureDate)}${detail('Stay total', `${row.reservation.currencyCode} ${row.reservation.totalAmount}`)}${detail('Confirmation', row.booking.confirmationNumber)}
+        </table></td></tr></table>
+        ${row.reservation.holdExpiresAt ? `<p style="font-size:14px;line-height:1.6;margin:20px 0">Unpaid hold expires: ${escape(row.reservation.holdExpiresAt.toISOString())}</p>` : ''}`;
+      await this.email.send({ to: row.guest.email, subject: `${staging ? '[STAGING] ' : ''}${subject}`, text, html });
     } catch { this.logger.warn({ event: 'booking_email_failed', reservationId: event.entityId, propertyId: event.propertyId }); }
   }
 }
