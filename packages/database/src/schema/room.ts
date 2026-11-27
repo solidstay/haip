@@ -60,6 +60,9 @@ export const roomTypes = pgTable('room_types', {
   isAccessible: boolean('is_accessible').notNull().default(false), // ADA rooms dispersed across categories
   amenities: jsonb('amenities').$type<string[]>(), // ["wifi", "minibar", "balcony", "safe"]
 
+  // Optional mandatory once-per-stay service; FK is installed by migration 0032.
+  cleaningFeeServiceId: uuid('cleaning_fee_service_id'),
+
   // Pricing reference (base rate defined here, actuals in rate_plans)
   sortOrder: integer('sort_order').notNull().default(0),
 

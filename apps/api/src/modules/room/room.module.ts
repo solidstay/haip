@@ -1,3 +1,4 @@
+import { RoomCleaningFeeService } from './room-cleaning-fee.service';
 import { Module } from '@nestjs/common';
 import { WebhookModule } from '../webhook/webhook.module';
 import { RoomController } from './room.controller';
@@ -8,7 +9,7 @@ import { RoomDiscrepancyService } from './room-discrepancy.service';
 @Module({
   imports: [WebhookModule],
   controllers: [RoomController],
-  providers: [RoomService, RoomStatusService, RoomDiscrepancyService],
+  providers: [RoomCleaningFeeService, RoomService, RoomStatusService, RoomDiscrepancyService],
   exports: [RoomService, RoomStatusService, RoomDiscrepancyService],
 })
 export class RoomModule {}

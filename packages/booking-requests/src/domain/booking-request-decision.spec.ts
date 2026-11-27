@@ -1519,11 +1519,11 @@ describe('BookingRequestService acceptance', () => {
     });
   });
 
-  it('persists selected and package ancillary events with the canonical payload contract', async () => {
+  it.each([true, false])('persists selected or automatically quoted services and package events (selected: %s)', async selected => {
     const serviceId = '99999999-0000-4000-a000-000000000001';
     const packageServiceId = '99999999-0000-4000-a000-000000000002';
     const harness = makeHarness([
-      pendingRequest({ serviceIds: [serviceId] }),
+      pendingRequest({ serviceIds: selected ? [serviceId] : [] }),
     ]);
     const acceptedQuote = {
       ...structuredClone(currentQuote),

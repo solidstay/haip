@@ -312,6 +312,10 @@ function AccommodationForm({
           </p>
         )}
       </form>
+      <Link className="mt-6 inline-flex min-h-[44px] items-center font-medium text-telivity-teal"
+        to={`/rooms/types/${unit ? row.roomTypeId : row.id}/cleaning-fee?propertyId=${propertyId}`}>
+        Configure cleaning fee{unit ? ' for this accommodation type' : ''}
+      </Link>
       <section className="mt-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
         <h2 className="mb-4 text-lg font-semibold">Accommodation photos</h2>
         <MediaGallery

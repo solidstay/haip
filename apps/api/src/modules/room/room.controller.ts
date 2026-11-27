@@ -1,3 +1,5 @@
+import { RoomCleaningFeeService } from './room-cleaning-fee.service';
+import { CleaningFeeDto } from './dto/cleaning-fee.dto';
 import {
   Controller,
   Get,
@@ -30,6 +32,7 @@ import { resolvePropertyId } from '../../common/property-id';
 @Controller('rooms')
 export class RoomController {
   constructor(
+    private readonly cleaningFeeService: RoomCleaningFeeService,
     private readonly roomService: RoomService,
     private readonly roomStatusService: RoomStatusService,
     private readonly roomDiscrepancyService: RoomDiscrepancyService,
@@ -95,6 +98,23 @@ export class RoomController {
     @Body() dto: UpdateRoomTypeDto,
   ) {
     return this.roomService.updateRoomType(id, propertyId, dto);
+  }
+
+  @Get('types/:id/cleaning-fee')
+  @RequirePermissions('ops.read', 'services.read')
+  @ApiOperation({ summary: 'Read the fixed room-type cleaning fee' })
+  getCleaningFee(@Param('id', ParseUUIDPipe) id: string,
+    @Query('propertyId', ParseUUIDPipe) propertyId: string) {
+    return this.cleaningFeeService.get(id, propertyId);
+  }
+
+  @Put('types/:id/cleaning-fee')
+  @RequirePermissions('ops.manage', 'services.manage')
+  @ApiOperation({ summary: 'Set or remove the fixed once-per-stay cleaning fee' })
+  setCleaningFee(@Param('id', ParseUUIDPipe) id: string,
+    @Query('propertyId', ParseUUIDPipe) propertyId: string,
+    @Body() dto: CleaningFeeDto) {
+    return this.cleaningFeeService.set(id, propertyId, dto);
   }
 
   // --- Room status routes (before :id to avoid conflicts) ---

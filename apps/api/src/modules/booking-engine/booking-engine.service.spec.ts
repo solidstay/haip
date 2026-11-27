@@ -68,7 +68,7 @@ function makeService(overrides: Partial<Record<string, any>> = {}) {
   };
 
   const svc = new BookingEngineService(
-    { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ id: RT, propertyId: PROP, isActive: true, maxOccupancy: 4 }]) })) })) } as any,
+    { select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ id: RT, propertyId: PROP, isActive: true, maxOccupancy: 4, ...overrides.roomType }]) })) })) } as any,
     search as any,
     bookingSvc as any,
     reservation as any,
@@ -510,5 +510,59 @@ describe('BookingEngineService trusted guest reuse', () => {
     reservation.create.mockRejectedValue(new ForbiddenException('Do Not Rent'));
     await expect(svc.book(PROP,bookDto,{guestId:'guest-1',propertyId:PROP})).rejects.toThrow(/Do Not Rent/);
     expect(guest.create).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('mandatory room cleaning fee', () => {
+  const fee = { id: 'cleaning-1', code: 'CLEAN', name: 'Cleaning fee', price: '25.00',
+    currencyCode: 'USD', chargeType: 'fee', postingRule: 'once',
+    sellChannels: ['room_cleaning_fee'], isActive: true };
+  function setup() {
+    const result = makeService({ roomType: { cleaningFeeServiceId: fee.id } });
+    result.ancillary.findServiceById.mockResolvedValue(fee);
+    result.tax.calculateTaxes.mockResolvedValue([]);
+    return result;
+  }
+  it('includes the configured fee once for a multi-night stay without guest selection', async () => {
+    const { svc } = setup();
+    const quote = await svc.quote(PROP, bookDto);
+    expect(quote.grandTotal).toBe('225.00');
+    expect(quote.servicesTotal).toBe('25.00');
+    expect(quote.services).toHaveLength(1);
+    expect(quote.services[0]).toMatchObject({ quantity: 1, lineTotal: '25.00', postingRule: 'once' });
+  });
+  it('does not charge twice if the same service is also supplied by the guest', async () => {
+    const { svc } = setup();
+    const quote = await svc.quote(PROP, { ...bookDto, serviceIds: [fee.id] });
+    expect(quote.grandTotal).toBe('225.00');
+    expect(quote.services).toHaveLength(1);
+  });
+  it.each([
+    { currencyCode: 'GBP' }, { isActive: false }, { postingRule: 'per_night' }, { sellChannels: [] },
+  ])('fails closed for an invalid configured fee: %j', async change => {
+    const { svc, ancillary, reservation } = setup();
+    ancillary.findServiceById.mockResolvedValue({ ...fee, ...change });
+    await expect(svc.book(PROP, bookDto)).rejects.toThrow();
+    expect(reservation.create).not.toHaveBeenCalled();
+  });
+  it('attaches the automatically quoted fee to the reservation at the agreed price', async () => {
+    const { svc, ancillary } = setup();
+    await svc.book(PROP, bookDto);
+    expect(ancillary.attachToReservation).toHaveBeenCalledWith('res-1',
+      expect.objectContaining({ propertyId: PROP, serviceId: fee.id, unitPrice: '25.00' }),
+      undefined, { currencyCode: 'USD', postingRule: 'once', chargeType: 'fee' });
+  });
+  it('stops charging a configured fee when its amount is zero', async () => {
+    const { svc, ancillary } = setup();
+    ancillary.findServiceById.mockResolvedValue({ ...fee, price: '0.00' });
+    const quote = await svc.quote(PROP, bookDto);
+    expect(quote.grandTotal).toBe('200.00');
+    expect(quote.services).toEqual([]);
+  });
+  it('rejects a stale fee-free total before creating a booking', async () => {
+    const { svc, reservation } = setup();
+    await expect(svc.book(PROP, { ...bookDto, expectedTotal: '200.00' })).rejects.toThrow(/Quote changed/);
+    expect(reservation.create).not.toHaveBeenCalled();
   });
 });

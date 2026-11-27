@@ -76,12 +76,11 @@ export class AncillaryService {
     return row;
   }
 
-  async findServiceById(id: string, propertyId: string, tx?: any) {
+  async findServiceById(id: string, propertyId: string, tx?: any, lock = false) {
     const db = tx ?? this.db;
-    const [row] = await db
-      .select()
-      .from(services)
+    const query = db.select().from(services)
       .where(and(eq(services.id, id), eq(services.propertyId, propertyId)));
+    const [row] = await (lock ? query.for('share') : query);
     if (!row) {
       throw new NotFoundException(`Service ${id} not found`);
     }

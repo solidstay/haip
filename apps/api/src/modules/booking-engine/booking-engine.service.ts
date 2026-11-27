@@ -170,7 +170,9 @@ export class BookingEngineService {
 
     const nights = this.nightsBetween(dto.checkIn, dto.checkOut);
     await this.ratePlanService.assertSellable(propertyId, dto.ratePlanId, dto.checkIn, dto.checkOut, db);
-    const [roomType] = await (db ?? this.db).select().from(roomTypes).where(and(eq(roomTypes.id, dto.roomTypeId), eq(roomTypes.propertyId, propertyId), eq(roomTypes.isActive, true)));
+    const typeQuery = (db ?? this.db).select().from(roomTypes).where(and(eq(roomTypes.id, dto.roomTypeId), eq(roomTypes.propertyId, propertyId), eq(roomTypes.isActive, true)));
+    const [roomType] = await (options?.lockForUpdate && typeof typeQuery.for === 'function'
+      ? typeQuery.for('share') : typeQuery);
     if (!roomType || dto.adults + (dto.children ?? 0) > roomType.maxOccupancy) {
       throw new BadRequestException('Selected room cannot accommodate this party');
     }
@@ -243,22 +245,32 @@ export class BookingEngineService {
     let servicesTotal = new Decimal(0);
     let servicesTaxTotal = new Decimal(0);
 
-    if (dto.serviceIds?.length) {
+    const serviceIds = [...new Set([...(dto.serviceIds ?? []),
+      ...(roomType.cleaningFeeServiceId ? [roomType.cleaningFeeServiceId as string] : [])])];
+    if (serviceIds.length) {
       const seen = new Set<string>();
-      for (const serviceId of dto.serviceIds) {
+      for (const serviceId of serviceIds) {
         if (seen.has(serviceId)) continue;
         seen.add(serviceId);
 
-        const service = await this.ancillaryService.findServiceById(serviceId, propertyId, db);
+        const service = options?.lockForUpdate
+          ? await this.ancillaryService.findServiceById(serviceId, propertyId, db, true)
+          : await this.ancillaryService.findServiceById(serviceId, propertyId, db);
         if (!service.isActive) {
           throw new BadRequestException(`Service ${service.code} is not available`);
         }
         const channels: string[] = Array.isArray(service.sellChannels) ? service.sellChannels : [];
-        if (!channels.includes('booking_engine')) {
+        const cleaningFee = serviceId === roomType.cleaningFeeServiceId;
+        if (!channels.includes(cleaningFee ? 'room_cleaning_fee' : 'booking_engine')) {
           throw new BadRequestException(`Service ${service.code} is not available for direct booking`);
         }
 
+        if (service.currencyCode !== currency) throw new BadRequestException('Mixed currencies are not supported');
+        if (serviceId === roomType.cleaningFeeServiceId && (service.postingRule !== 'once' || service.chargeType !== 'fee')) {
+          throw new BadRequestException('Cleaning fee must be a fixed once-per-stay fee');
+        }
         const unitPrice = new Decimal(service.price);
+        if (cleaningFee && unitPrice.isZero()) continue;
         const postingRule = service.postingRule as string;
 
         if (postingRule === 'on_consumption') {
@@ -540,16 +552,22 @@ export class BookingEngineService {
     }, tx);
 
     // 4b. Attach selected extras (posting deferred to check-in / night audit).
-    if (dto.serviceIds?.length) {
+    if (quote.services.length) {
       const seen = new Set<string>();
-      for (const serviceId of dto.serviceIds) {
+      for (const quotedService of quote.services) {
+        const serviceId = quotedService.serviceId;
         if (seen.has(serviceId)) continue;
         seen.add(serviceId);
         await this.ancillaryService.attachToReservation(reservation.id, {
           propertyId,
           serviceId,
           sourceChannel: 'booking_engine',
-        }, tx);
+          unitPrice: quotedService.unitPrice,
+        }, tx, {
+          currencyCode: quotedService.currencyCode,
+          postingRule: quotedService.postingRule,
+          chargeType: quotedService.chargeType,
+        });
       }
       await this.ancillaryService.ensurePackageComponents(reservation.id, propertyId, tx);
     } else {

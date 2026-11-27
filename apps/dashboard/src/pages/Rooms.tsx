@@ -1,3 +1,4 @@
+import CleaningFeeEditor from '../components/property/CleaningFeeEditor';
 import AccommodationEditor from '../components/property/AccommodationEditor';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -605,6 +606,7 @@ export default function Rooms() {
     <Routes>
       <Route index element={<RoomList />} />
       <Route path="types" element={<RoomTypeList />} />
+      <Route path="types/:id/cleaning-fee" element={<CleaningFeeEditor />} />
       <Route path="types/:id" element={<AccommodationEditor />} />
       <Route path=":id/edit" element={<AccommodationEditor unit />} />
     </Routes>

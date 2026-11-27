@@ -888,7 +888,7 @@ export class BookingRequestService {
       }, tx);
 
       const attachedServices: Array<Record<string, unknown>> = [];
-      for (const serviceId of new Set(locked.serviceIds ?? [])) {
+      for (const serviceId of new Set([...(locked.serviceIds ?? []), ...pricing.services.map(service => service.serviceId)])) {
         const acceptedService = pricing.services.find((service: AcceptedPricingSnapshot['services'][number]) =>
           service.serviceId === serviceId);
         if (!acceptedService) {
