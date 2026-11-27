@@ -42,6 +42,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { PosModule } from './modules/pos/pos.module';
 import { DoorLockModule } from './modules/door-lock/door-lock.module';
+import { GuestCheckInModule } from './modules/guest-check-in/guest-check-in.module';
 import { LlmModule } from './modules/llm/llm.module';
 import { SearchModule } from './modules/search/search.module';
 import { StaffNotificationsModule } from './modules/staff-notifications/staff-notifications.module';
@@ -53,6 +54,7 @@ import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { IcalModule } from './modules/ical/ical.module';
 import { FiscalModule } from './modules/fiscal/fiscal.module';
+import { ProfessionModule } from './modules/profession/profession.module';
 import { bookingRequestsModules } from './booking-requests.bootstrap';
 
 const imports: any[] = [
@@ -70,6 +72,7 @@ const imports: any[] = [
   PropertyModule,
   RoomModule,
   GuestModule,
+  ProfessionModule,
   MediaModule,
   ReservationModule,
   FolioModule,
@@ -104,6 +107,7 @@ const imports: any[] = [
   PosModule,
   FolioInboundModule,
   DoorLockModule,
+  GuestCheckInModule,
   LlmModule,
   SearchModule,
   StaffNotificationsModule,

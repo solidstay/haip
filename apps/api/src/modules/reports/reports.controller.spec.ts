@@ -19,7 +19,7 @@ describe('portfolio report permission scope', () => {
     const resolver = { resolvePropertyIds: vi.fn().mockResolvedValue(['property-a', 'property-b']) };
     const config = { get: () => 'true' };
     const permissions = { findLocalUser: vi.fn().mockResolvedValue({ id: 'local-1', status }), getEffectivePermissions: vi.fn(async (_user: string, property: string) => property === 'property-a' ? ['reports.view'] : []) };
-    return { controller: new ReportsController(reports as any, resolver as any, config as any, permissions as any), reports, permissions };
+    return { controller: new ReportsController(reports as any, resolver as any, config as any, permissions as any, {} as any), reports, permissions };
   }
   const user = { sub: 'staff-1', email: 'staff@example.test', name: 'Staff', roles: ['admin'], propertyIds: ['property-a', 'property-b'] };
   it('aggregates only properties with an explicit local report grant', async () => {

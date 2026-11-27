@@ -11,6 +11,7 @@ import {
   ServiceUnavailableException,
   ConflictException,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Public } from '../auth/public.decorator';
@@ -27,6 +28,10 @@ import {
   type BookingRequestStripeHandler,
   type BookingRequestStripePaymentRow,
 } from './booking-request-stripe-handler.interface';
+import {
+  CONNECT_CHECKOUT_STRIPE_HANDLER,
+  type ConnectCheckoutStripeHandler,
+} from './connect-checkout-stripe-handler.interface';
 import { classifyHaipMetadata } from './stripe-financial-state';
 import { StripeInvoiceService } from './stripe-invoice.service';
 import { StripeCheckoutService } from './stripe-checkout.service';
@@ -58,6 +63,7 @@ export class StripeWebhookController {
     private readonly webhookService: WebhookService,
     private readonly folioService: FolioService,
     private readonly configService: ConfigService,
+    private readonly moduleRef: ModuleRef,
     @Optional()
     @Inject(BOOKING_REQUEST_STRIPE_HANDLER)
     private readonly bookingRequestStripeHandler?: BookingRequestStripeHandler,
@@ -131,10 +137,22 @@ export class StripeWebhookController {
         case 'checkout.session.completed':
         case 'checkout.session.async_payment_succeeded':
         case 'checkout.session.async_payment_failed':
-        case 'checkout.session.expired':
-          if (!this.checkoutService) throw new Error('Stripe Checkout handler is not registered');
-          await this.checkoutService.handleSession(event.data.object as Stripe.Checkout.Session, tx, emit);
+        case 'checkout.session.expired': {
+          const session = event.data.object as Stripe.Checkout.Session;
+          if (session.metadata?.['haip_checkout_id']) {
+            if (!this.checkoutService) throw new Error('Stripe Checkout handler is not registered');
+            await this.checkoutService.handleSession(session, tx, emit);
+          } else if (event.type === 'checkout.session.completed' && session.metadata?.['confirmationNumber']) {
+            // Resolve lazily to avoid PaymentModule ↔ ConnectModule imports.
+            // Missing handlers must retry instead of acknowledging an unpaid booking.
+            const handler = this.moduleRef.get<ConnectCheckoutStripeHandler>(
+              CONNECT_CHECKOUT_STRIPE_HANDLER, { strict: false },
+            );
+            if (!handler) throw new Error('Connect Checkout handler is not registered');
+            await handler.handleCheckoutSessionCompleted(event.id, session);
+          }
           break;
+        }
         case 'payment_intent.succeeded':
           await this.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, tx, emit);
           break;
@@ -164,6 +182,7 @@ export class StripeWebhookController {
         case 'charge.refunded':
           await this.handleChargeRefunded(event.data.object as Stripe.Charge, tx, emit);
           break;
+
 
         default:
           this.logger.debug(`Unhandled event type: ${event.type}`);

@@ -92,7 +92,7 @@ describe.skipIf(!url)('unpaid hold maintenance on PostgreSQL', () => {
   });
   it('records an actual late manual receipt after the expiry lock wins without reviving inventory', async () => {
     const folio = new FolioService(db, webhook as unknown as WebhookService, {} as TaxService);
-    const payment = new PaymentService(db, folio, {} as PaymentGateway, webhook as unknown as WebhookService, new ConfigService(), {} as RedsysCredentialsService);
+    const payment = new PaymentService(db, folio, {} as PaymentGateway, webhook as unknown as WebhookService, new ConfigService(), {} as RedsysCredentialsService, {} as any);
     let locked!: () => void, release!: () => void;
     const ready = new Promise<void>(resolve => { locked = resolve; });
     const gate = new Promise<void>(resolve => { release = resolve; });
@@ -111,7 +111,7 @@ describe.skipIf(!url)('unpaid hold maintenance on PostgreSQL', () => {
   });
   it('keeps a hold with a manual receipt recorded through PaymentService', async () => {
     const folio = new FolioService(db, webhook as unknown as WebhookService, {} as TaxService);
-    const payment = new PaymentService(db, folio, {} as PaymentGateway, webhook as unknown as WebhookService, new ConfigService(), {} as RedsysCredentialsService);
+    const payment = new PaymentService(db, folio, {} as PaymentGateway, webhook as unknown as WebhookService, new ConfigService(), {} as RedsysCredentialsService, {} as any);
     await payment.recordPayment({ propertyId, folioId, amount: '100', currencyCode: 'GBP', method: 'bank_transfer' });
     await maintenance().run(); expect((await row()).status).toBe('pending');
   });

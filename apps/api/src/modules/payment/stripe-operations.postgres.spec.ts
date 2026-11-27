@@ -49,7 +49,7 @@ suite('Stripe operations against real PostgreSQL (synthetic fixtures, simulated 
   const invoices = new StripeInvoiceService(db, config, folio, events, refunds);
 
   const deposits = new DepositService(db, webhook as any, folio);
-  const payment = new PaymentService(db, folio, {} as any, webhook as any, config, {} as any, refunds);
+  const payment = new PaymentService(db, folio, {} as any, webhook as any, config, {} as any, {} as any, undefined, refunds);
   const engine = new BookingEngineService(db, {} as any, {} as any, reservation, availability, rates, tax,
     new GuestService(db), folio, payment, deposits, new BookingEngineConfigService(db, config), config,
     ancillary, policy, checkout, events);
@@ -267,7 +267,7 @@ suite('Stripe operations against real PostgreSQL (synthetic fixtures, simulated 
     await events.process(event(), (tx, emit) => checkout.handleSession(session, tx, emit));
     const claim = await refunds.refund(result.deposit.paymentId, propertyId);
     const remote = remoteRefunds.get(claim.gatewayTransactionId!); remote.status = 'succeeded';
-    const controller = new StripeWebhookController(db, webhook as any, folio, config, undefined, events, checkout, invoices, refunds);
+    const controller = new StripeWebhookController(db, webhook as any, folio, config, {} as any, undefined, events, checkout, invoices, refunds);
     const stripe = Reflect.get(controller, 'stripe');
     const payload = JSON.stringify({ id: `evt_${randomUUID()}`, type: 'refund.updated', livemode: false, data: { object: remote } });
     const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_synthetic' });
@@ -356,7 +356,7 @@ suite('Stripe operations against real PostgreSQL (synthetic fixtures, simulated 
     const [stored] = await db.select().from(payments).where(eq(payments.id, draft.paymentId)); expect(stored!.status).toBe('pending');
   });
   it('rejects invalid signatures and returns a retryable error on a verified processing failure', async () => {
-    const controller = new StripeWebhookController(db, webhook as any, folio, config, undefined, events, checkout, invoices);
+    const controller = new StripeWebhookController(db, webhook as any, folio, config, {} as any, undefined, events, checkout, invoices);
     const stripe = Reflect.get(controller, 'stripe');
     const body = JSON.stringify({ id: `evt_${randomUUID()}`, type: 'checkout.session.completed', livemode: false, data: { object: { id: 'cs_not_correlated', metadata: { haip_property_id: propertyId, haip_checkout_id: randomUUID() } } } });
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };

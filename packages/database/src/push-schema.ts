@@ -212,6 +212,20 @@ export async function pushSchema(databaseUrl: string = DATABASE_URL) {
     `ALTER TABLE guests ADD COLUMN IF NOT EXISTS profession varchar(100)`,
     `ALTER TABLE guests ADD COLUMN IF NOT EXISTS tax_id varchar(50)`,
     `ALTER TABLE guests ADD COLUMN IF NOT EXISTS registration_data jsonb`,
+    // professions
+    `CREATE TABLE IF NOT EXISTS professions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name varchar(200) NOT NULL,
+      code varchar(50),
+      country_code varchar(2),
+      is_system boolean NOT NULL DEFAULT false,
+      metadata jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )`,
+    `CREATE INDEX IF NOT EXISTS professions_name_idx ON professions (name)`,
+    `CREATE INDEX IF NOT EXISTS professions_code_idx ON professions (code)`,
+    `CREATE INDEX IF NOT EXISTS professions_country_idx ON professions (country_code)`,
     // rate_plans
     `CREATE TABLE IF NOT EXISTS rate_plans (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1485,6 +1499,8 @@ export async function pushSchema(databaseUrl: string = DATABASE_URL) {
     `ALTER TABLE rooms ADD COLUMN IF NOT EXISTS hk_observed_persons integer`,
     `ALTER TABLE rooms ADD COLUMN IF NOT EXISTS hk_observed_at timestamptz`,
     `ALTER TABLE rooms ADD COLUMN IF NOT EXISTS hk_observed_by uuid`,
+    `ALTER TABLE rooms ADD COLUMN IF NOT EXISTS status_changed_at timestamptz NOT NULL DEFAULT now()`,
+    `ALTER TABLE reservations ADD COLUMN IF NOT EXISTS card_guarantee jsonb`,
     `ALTER TABLE rate_restrictions ADD COLUMN IF NOT EXISTS rate_override numeric(12,2)`,
     `ALTER TABLE guest_reviews ADD COLUMN IF NOT EXISTS external_id varchar(255)`,
     `ALTER TABLE guest_reviews ADD COLUMN IF NOT EXISTS external_url text`,

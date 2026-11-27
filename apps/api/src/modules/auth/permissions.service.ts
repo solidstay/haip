@@ -1,5 +1,5 @@
 import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { users, userRoles, rolePermissions } from '@telivityhaip/database';
 import { DRIZZLE } from '../../database/database.module';
 
@@ -37,12 +37,16 @@ export class PermissionsService {
 
   /** Status is global to the identity, not its home property or JWT lifetime. */
   async assertActiveIdentity(identity: { sub?: string; email?: string }): Promise<void> {
-    // PostgreSQL UUID links also accept braced, undashed and upper-case UUIDs.
-    // Non-UUID external subjects cannot match a link, but still use email fallback.
-    const subject = identity.sub?.replace(/^\{(.*)\}$/, '$1').replaceAll('-', '');
-    if (subject && /^[a-f\d]{32}$/i.test(subject)) {
+    // Generic OIDC subjects are opaque text. Preserve exact matching while also
+    // accepting the UUID spellings supported before the UUID-to-text migration.
+    const subject = identity.sub;
+    if (subject) {
+      const compact = subject.replace(/^\{(.*)\}$/, '$1').replaceAll('-', '');
+      const canonical = /^[a-f\d]{32}$/i.test(compact)
+        ? compact.toLowerCase().replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')
+        : subject;
       const linked = await this.db.select({ status: users.status }).from(users)
-        .where(eq(users.keycloakSub, subject));
+        .where(inArray(users.keycloakSub, [...new Set([subject, canonical])]));
       if (linked.length > 0) {
         // Subject links are not unique. Any non-active match must deny rather
         // than selecting an arbitrary active row or falling through to email.

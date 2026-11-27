@@ -85,6 +85,8 @@ export const rooms = pgTable('rooms', {
 
   // Status (state machine)
   status: roomStatusEnum('status').notNull().default('vacant_clean'),
+  /** When `status` last changed (not touched by notes-only edits). Drives "how long OOO". */
+  statusChangedAt: timestamp('status_changed_at', { withTimezone: true }).notNull().defaultNow(),
 
   // HK observed occupancy (orthogonal to FO / cleanliness status)
   hkOccupancy: hkOccupancyEnum('hk_occupancy').notNull().default('unknown'),
@@ -101,6 +103,9 @@ export const rooms = pgTable('rooms', {
   // Maintenance
   maintenanceNotes: text('maintenance_notes'),
   lastInspectedAt: timestamp('last_inspected_at', { withTimezone: true }),
+
+  /** Vendor lock/device id for contactless access (Nuki / TTLock / Salto / webhook). */
+  externalLockId: varchar('external_lock_id', { length: 100 }),
 
   // Status
   isActive: boolean('is_active').notNull().default(true),

@@ -44,6 +44,9 @@ export {
 // Guests
 export { vipLevelEnum, guests } from './guest.js';
 
+// Professions
+export { professions } from './profession.js';
+
 // Reservations & Bookings
 export {
   reservationStatusEnum,
@@ -54,7 +57,11 @@ export {
   reservationGuests,
   reservationNotes,
 } from './reservation.js';
-export type { AcceptedPricingSnapshot } from './reservation.js';
+export type {
+  AcceptedPricingSnapshot,
+  CardGuaranteeInfo,
+  CardGuaranteeStatus,
+} from './reservation.js';
 
 // Cancellation policies (rate-plan money outcomes)
 export {
@@ -147,6 +154,11 @@ export {
   webhookDeliveryStatusEnum,
   webhookDeliveries,
   connectCredentials,
+  connectPaymentSessions,
+} from './connect.js';
+export type {
+  ConnectPaymentMode,
+  ConnectPaymentSessionStatus,
 } from './connect.js';
 
 // Integration catalog (global) + per-property enablement

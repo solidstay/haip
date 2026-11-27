@@ -6,6 +6,7 @@ import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { PermissionsService } from '../auth/permissions.service';
 import { PortfolioPropertyResolver } from './portfolio-property-resolver';
+import { RateOverridesReportService } from './rate-overrides-report.service';
 import { ConfigService } from '@nestjs/config';
 import { ReportQueryDto } from './dto/report-query.dto';
 
@@ -24,6 +25,7 @@ describe('ReportsController occupancy', () => {
         { provide: ReportsService, useValue: { getOccupancy } },
         { provide: PortfolioPropertyResolver, useValue: {} },
         { provide: ConfigService, useValue: { get: vi.fn() } },
+        { provide: RateOverridesReportService, useValue: { getRateOverrides: vi.fn() } },
       ],
     }).compile();
 

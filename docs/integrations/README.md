@@ -20,6 +20,7 @@ Staff REST request/response conventions (propertyId locations, envelopes, pagina
 | [Slack, Teams, Discord](slack-teams-discord.md) | Post HAIP events to chat incoming webhooks |
 | [Connect API key](connect-api-key.md) | `x-api-key` auth, OpenAPI, subscriptions |
 | [Service principal (Keycloak JWT)](service-principal.md) | Staff REST for server integrations — client credentials + `pnpm integration:link` |
+| [Generic OIDC login](oidc-generic.md) | Zitadel, Authentik, Authelia, Entra ID… instead of Keycloak; runtime dashboard auth config |
 | [Folio inbound (POS)](folio-inbound-pos.md) | Post incidental charges from any POS |
 | [Accounting CSV](accounting-csv.md) | Revenue journal / trial balance export |
 | [BI on Postgres](bi-postgres.md) | Read-only DB access for Metabase, Grafana, etc. |
@@ -38,6 +39,7 @@ Staff REST request/response conventions (propertyId locations, envelopes, pagina
 | [Beds24 & Channex](channel-beds24-channex.md) | Channel manager adapters |
 | [Payments (Adyen/Mollie/Square/Braintree)](payments-adyen-mollie-square-braintree.md) | Additional payment gateways |
 | [Payments (Redsys)](payments-redsys.md) | Spanish TPV Virtual (hosted redirect + REST capture/void/refund) |
+| [Payments (Worldline)](payments-worldline.md) | In-page card hold, capture, cancel, and refund |
 | [Door locks](door-locks-nuki-ttlock-salto.md) | Nuki, TTLock, Salto KS |
 | [SendGrid email](sendgrid-email.md) | Transactional email provider |
 | [WhatsApp Cloud](whatsapp-cloud.md) | Meta WhatsApp Cloud API provider |

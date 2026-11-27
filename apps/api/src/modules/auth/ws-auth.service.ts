@@ -4,36 +4,31 @@ import * as jwt from 'jsonwebtoken';
 import jwksClient, { JwksClient, SigningKey } from 'jwks-rsa';
 import { PermissionsService } from './permissions.service';
 import type { AuthUser } from './current-user.decorator';
+import {
+  azpAllowed,
+  principalFromPayload,
+  resolveOidcVerifierConfig,
+  type OidcVerifierConfig,
+} from './oidc-config';
 
 /**
  * Token verifier used by non-HTTP entrypoints (e.g. WebSocket gateway) that
  * cannot go through the passport HTTP strategy. Mirrors JwtStrategy's
- * validation rules: Keycloak issuer, audience (aud + azp), RS256 signature
- * fetched from JWKS.
+ * validation rules: issuer (Keycloak or generic OIDC), audience (aud + azp),
+ * RS256 signature fetched from JWKS, and the same claim mapping.
  */
 @Injectable()
 export class WsAuthService {
   private readonly logger = new Logger(WsAuthService.name);
-  private readonly issuer: string;
-  private readonly expectedAudience: string;
-  private readonly allowedAzp: string[];
+  private readonly oidc: OidcVerifierConfig;
   private readonly jwks: JwksClient;
 
   constructor(configService: ConfigService, private readonly permissions: PermissionsService) {
-    const keycloakUrl = configService.get<string>('KEYCLOAK_URL', 'http://localhost:8080');
-    const realm = configService.get<string>('KEYCLOAK_REALM', 'haip');
-    this.issuer = `${keycloakUrl}/realms/${realm}`;
-    this.expectedAudience =
-      configService.get<string>('KEYCLOAK_AUDIENCE') ||
-      configService.get<string>('KEYCLOAK_CLIENT_ID', 'haip-api');
-    // Same allow-list as JwtStrategy -- the two verifiers must agree on who
+    // Same resolver as JwtStrategy -- the two verifiers must agree on who
     // may call, or a caller works over HTTP and dies on the socket.
-    this.allowedAzp = (configService.get<string>('KEYCLOAK_ALLOWED_AZP') || this.expectedAudience)
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    this.oidc = resolveOidcVerifierConfig((key) => configService.get<string>(key));
     this.jwks = jwksClient({
-      jwksUri: `${this.issuer}/protocol/openid-connect/certs`,
+      jwksUri: this.oidc.jwksUri,
       cache: true,
       rateLimit: true,
       jwksRequestsPerMinute: 5,
@@ -65,8 +60,8 @@ export class WsAuthService {
         },
         {
           algorithms: ['RS256'],
-          issuer: this.issuer,
-          audience: this.expectedAudience,
+          issuer: this.oidc.issuer,
+          audience: this.oidc.audience,
         },
         (err, decoded) => {
           if (err) reject(err);
@@ -75,17 +70,12 @@ export class WsAuthService {
       );
     });
 
-    if (payload.azp && !this.allowedAzp.includes(payload.azp)) {
+    if (!azpAllowed(this.oidc, payload.azp)) {
       throw new Error('Invalid token audience (azp mismatch)');
     }
 
-    await this.assertActiveIdentity(payload);
-    return {
-      sub: payload.sub,
-      email: payload.email ?? '',
-      name: payload.name ?? payload.preferred_username ?? '',
-      roles: payload.realm_access?.roles ?? [],
-      propertyIds: payload.property_ids ?? undefined,
-    };
+    const user = principalFromPayload(payload, this.oidc);
+    await this.assertActiveIdentity(user);
+    return user;
   }
 }

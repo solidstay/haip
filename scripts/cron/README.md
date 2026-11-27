@@ -46,6 +46,8 @@ If you refresh tokens externally, set `HAIP_CRON_TOKEN` to a valid Bearer JWT an
 | `KEYCLOAK_REALM` | option A | Realm name (default `haip`) |
 | `KEYCLOAK_CLIENT_ID` | option A | Cron service client id |
 | `KEYCLOAK_CLIENT_SECRET` | option A | Cron service client secret |
+| `OIDC_TOKEN_URL` | option A, non-Keycloak IdP | Token endpoint of any OIDC provider (e.g. Zitadel `<issuer>/oauth/v2/token`); replaces `KEYCLOAK_URL` + `KEYCLOAK_REALM` |
+| `OIDC_TOKEN_SCOPE` | optional | `scope` sent with the client-credentials grant (Zitadel needs the project audience scope) |
 
 ## Install
 
@@ -73,9 +75,11 @@ set +a
 
 | Script | Schedule (typical) | API |
 |--------|-------------------|-----|
-| `night-audit.sh` | Daily ~00:30 property local time | `POST /api/v1/night-audit/run` |
+| `night-audit.sh` | Daily ~00:30 property local time | `POST /api/v1/night-audit/run` with `"mode": "unattended"` |
 | `group-cutoffs.sh` | Daily after night audit | `POST /api/v1/groups/blocks/process-cutoffs` |
 | `agent-runs.sh <agentType>` | See matrix in [`docs/operations/cron.md`](../../docs/operations/cron.md) | `POST /api/v1/agents/:propertyId/:agentType/run?triggeredBy=schedule` |
+
+`night-audit.sh` posts `{"propertyId","businessDate","mode":"unattended"}`. That marks the run as a scheduled close. Do not drop `mode` when reimplementing the call. A body without `mode` is a manual close. The staff Night Audit screen omits `mode` on purpose. An API that accepts the extra field and does not use it ignores it and closes as before.
 
 **Revenue cadence:** cron `revenue_manager` only — do **not** also schedule `demand_forecast` / `pricing` / `overbooking` / `channel_mix` / `group_pickup` (they run inside RManager).
 

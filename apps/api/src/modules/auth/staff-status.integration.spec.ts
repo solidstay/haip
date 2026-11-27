@@ -73,4 +73,11 @@ describe.skipIf(!url)('retained staff identity on PostgreSQL', () => {
     }
   });
 
+  it('checks disabled generic OIDC subjects even without an email claim', async () => {
+    const genericSubject = '77776025198584418';
+    await db.update(schema.users).set({ keycloakSub: genericSubject, status: 'disabled' }).where(eq(schema.users.id, userId));
+    await expect(permissions.assertActiveIdentity({ sub: genericSubject })).rejects.toBeInstanceOf(UnauthorizedException);
+    await db.update(schema.users).set({ status: 'active' }).where(eq(schema.users.id, userId));
+    await expect(permissions.assertActiveIdentity({ sub: genericSubject })).resolves.toBeUndefined();
+  });
 });

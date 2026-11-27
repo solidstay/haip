@@ -43,6 +43,7 @@ export class WebhookLockProvider implements LockProvider {
         provider: this.name,
         credentialId,
         roomId: req.roomId ?? null,
+        externalLockId: req.externalLockId ?? null,
         accessCode,
         validFrom: req.validFrom ?? new Date().toISOString(),
         ...(req.validTo ? { validTo: req.validTo } : {}),
@@ -50,7 +51,13 @@ export class WebhookLockProvider implements LockProvider {
       req.propertyId,
     );
 
-    const credential: AccessCredential = { provider: this.name, credentialId, accessCode };
+    const credential: AccessCredential = {
+      provider: this.name,
+      credentialId,
+      accessCode,
+      // Middleware may attach a real BLE/NFC mobileKey via webhook consumer;
+      // core webhook adapter only issues the PIN.
+    };
 
     await this.credentials.recordIssued({
       propertyId: req.propertyId,

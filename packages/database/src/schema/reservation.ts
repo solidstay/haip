@@ -82,6 +82,20 @@ export interface AcceptedPricingSnapshot {
   };
 }
 
+export type CardGuaranteeStatus = 'valid' | 'missing' | 'expired' | 'declined';
+
+/** Non-sensitive card-guarantee summary on a reservation (never raw PAN or CVV). */
+export interface CardGuaranteeInfo {
+  status: CardGuaranteeStatus;
+  cardBrand?: string | null;
+  last4?: string | null;
+  expMonth?: number | null;
+  expYear?: number | null;
+  holderName?: string | null;
+  verifiedAt?: string | null;
+  reason?: string | null;
+}
+
 /**
  * Bookings — container for one or more reservations; identifies the booker.
  * Booking is the party wrapper; reservations are per-room.
@@ -149,6 +163,9 @@ export const reservations = pgTable('reservations', {
   specialRequests: text('special_requests'),
   preferences: jsonb('preferences').$type<Record<string, string>>(),
 
+  // Non-sensitive card-guarantee summary (never raw PAN or CVV)
+  cardGuarantee: jsonb('card_guarantee').$type<CardGuaranteeInfo>(),
+
   // Check-in/out tracking
   checkedInAt: timestamp('checked_in_at', { withTimezone: true }),
   checkedOutAt: timestamp('checked_out_at', { withTimezone: true }),
@@ -178,6 +195,9 @@ export const reservations = pgTable('reservations', {
 
   // Registration card acknowledgment
   registrationSignedAt: timestamp('registration_signed_at', { withTimezone: true }),
+
+  /** Set when the guest completed self check-in on their phone (null for desk-only). */
+  onlineCheckInCompletedAt: timestamp('online_check_in_completed_at', { withTimezone: true }),
 
   /** When true, room moves are blocked unless explicitly overridden. */
   doNotMove: boolean('do_not_move').notNull().default(false),

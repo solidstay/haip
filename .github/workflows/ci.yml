@@ -85,6 +85,9 @@ jobs:
         run: node scripts/sync-test-count.mjs --check
         env:
           DATABASE_URL: postgresql://haip:haip@localhost:5432/haip_test
+          # Maintenance suites scan the shared database; serialize files, not the races inside each test.
+          VITEST_MAX_FORKS: '1'
+          VITEST_MIN_FORKS: '1'
           ICAL_TEST_DATABASE_URL: postgresql://haip:haip@localhost:5432/haip_test
           ROOM_ALLOCATION_TEST_DATABASE_URL: postgresql://haip:haip@localhost:5432/haip_test
           STRIPE_OPERATIONS_LIVE_PG: '1'

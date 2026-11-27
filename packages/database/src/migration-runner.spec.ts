@@ -14,6 +14,7 @@ import {
   FIRST_TRACKED_MIGRATION_VERSION,
   getAppliedMigrationVersions,
   listPendingMigrations,
+  listTrackedMigrationFiles,
   resolveMigrationsDirectory,
   runAllMigrations,
   runPendingSqlMigrations,
@@ -229,6 +230,18 @@ describe.skipIf(!postgresReady)('migration runner (PostgreSQL)', () => {
 });
 
 describe('migration runner (unit)', () => {
+  it('keeps tracked versions unique and preserves previously deployed fork migrations', async () => {
+    const files = await listTrackedMigrationFiles(MIGRATIONS_DIR);
+    expect(new Set(files.map((file) => file.version)).size).toBe(files.length);
+    for (const filename of [
+      '0027_direct_booking_holds.sql',
+      '0028_ical_sync_health.sql',
+      '0029_ical_unit_mapping.sql',
+      '0030_stripe_operations.sql',
+    ]) {
+      expect(files.find((file) => file.version === Number(filename.slice(0, 4)))?.filename).toBe(filename);
+    }
+  });
   it('resolves migrations adjacent to the compiled entry directory', () => {
     const dir = resolveMigrationsDirectory(join(dirname(fileURLToPath(import.meta.url))));
     expect(dir.endsWith(`${join('src', 'migrations')}`) || dir.endsWith(`${join('dist', 'migrations')}`)).toBe(true);

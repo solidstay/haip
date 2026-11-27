@@ -72,6 +72,13 @@ export interface CommunicationConfig {
   localTips: string[];
   managerName?: string;
   managerTitle?: string;
+  /**
+   * Per-property wording overrides for a lifecycle email. Any field left out falls
+   * back to the built-in copy, so an override never needs to restate the default.
+   */
+  customTemplates?: Partial<
+    Record<EmailType, { subject?: string; firstTime?: string; repeat?: string }>
+  >;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +156,7 @@ const BODY_TEMPLATES: Record<EmailType, { firstTime: string; repeat: string }> =
       'Here\'s what you need to know:',
       '- Check-in time: {check_in_time}',
       '- Address: {property_address}',
+      '{check_in_section}',
       '{local_tips_section}',
       '{upsell_section}',
       '',
@@ -164,6 +172,7 @@ const BODY_TEMPLATES: Record<EmailType, { firstTime: string; repeat: string }> =
       '',
       'Quick reminder:',
       '- Check-in: {check_in_time}',
+      '{check_in_section}',
       '{local_tips_section}',
       '{upsell_section}',
       '',
@@ -179,6 +188,7 @@ const BODY_TEMPLATES: Record<EmailType, { firstTime: string; repeat: string }> =
       '',
       'Check-in is available from {check_in_time}.',
       '{property_address}',
+      '{check_in_section}',
       '',
       'See you soon!',
       '{property_name}',
@@ -189,6 +199,7 @@ const BODY_TEMPLATES: Record<EmailType, { firstTime: string; repeat: string }> =
       'Welcome back today! Your room at {property_name} is ready for you.',
       '',
       'Check-in from {check_in_time} as usual.',
+      '{check_in_section}',
       '',
       'See you shortly!',
       '{property_name}',
@@ -286,10 +297,12 @@ export function generateEmailDraft(
   property: PropertyContext,
   config: CommunicationConfig,
   previousEmailTypes: EmailType[] = [],
-  options?: { daysSinceDeparture?: number },
+  options?: { daysSinceDeparture?: number; checkInUrl?: string },
 ): EmailDraft | null {
-  // GDPR: check opt-out
-  if (!guest.gdprConsentMarketing && emailType !== 'confirmation') {
+  // GDPR: marketing types require consent. Transactional lifecycle mail
+  // (confirmation / pre_arrival / day_of — check-in links, stay logistics) always sends.
+  const transactionalTypes: EmailType[] = ['confirmation', 'pre_arrival', 'day_of'];
+  if (!guest.gdprConsentMarketing && !transactionalTypes.includes(emailType)) {
     return null;
   }
 
@@ -300,7 +313,13 @@ export function generateEmailDraft(
 
   const isRepeat = guest.isRepeatGuest;
   const templates = BODY_TEMPLATES[emailType];
-  const bodyTemplate = isRepeat ? templates.repeat : templates.firstTime;
+  // A per-property template override replaces the built-in copy for this type. It is a
+  // hotel's own wording, so it goes through the same fillTemplate/token path — never
+  // interpolated as raw HTML.
+  const override = config.customTemplates?.[emailType];
+  const bodyTemplate =
+    (isRepeat ? override?.repeat : override?.firstTime) ??
+    (isRepeat ? templates.repeat : templates.firstTime);
 
   // Build token map
   const daysUntilArrival = Math.max(0, Math.ceil(
@@ -337,6 +356,9 @@ export function generateEmailDraft(
     upsell_section: config.upsellEnabled
       ? '\nEnhance your stay — ask us about breakfast, parking, spa, and other extras when you arrive, or reply to this email to add them before check-in.\n'
       : '',
+    check_in_section: options?.checkInUrl
+      ? `\nComplete online check-in on your phone (registration, ID, payment, and room access):\n${options.checkInUrl}\n`
+      : '',
     review_links: buildReviewLinks(config),
   };
 
@@ -344,7 +366,7 @@ export function generateEmailDraft(
   if (isRepeat) personalizationTokens.push('repeat_guest');
   if (guest.vipLevel !== 'none') personalizationTokens.push('vip_level');
 
-  const subject = fillTemplate(SUBJECTS[emailType], tokens);
+  const subject = fillTemplate(override?.subject ?? SUBJECTS[emailType], tokens);
   const bodyText = fillTemplate(bodyTemplate, tokens);
   const bodyHtml = textToHtml(bodyText);
 
