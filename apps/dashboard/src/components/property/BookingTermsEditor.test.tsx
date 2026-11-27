@@ -20,10 +20,10 @@ describe('Rate terms editor', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     vi.mocked(api.get).mockResolvedValue({ data: { data: [{ id: 'policy-a', name: 'Flexible', code: 'FLEX', isActive: true, penaltyType: 'none', depositHandling: 'always_refund', freeCancelHoursBeforeArrival: 48 }] } });
     renderWithProviders(<CancellationPolicies />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Flexible', exact: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Flexible' }));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Unsaved name' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Flexible', exact: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'New policy', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flexible' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New policy' }));
     expect(confirm).toHaveBeenCalledOnce();
     expect(screen.getByLabelText('Name')).toHaveValue('Unsaved name');
     confirm.mockRestore();
