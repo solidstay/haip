@@ -14,6 +14,8 @@ const original = {
   description: 'Original description',
   countryCode: 'GB',
   currencyCode: 'GBP',
+  defaultLanguage: 'en',
+  overbookingPercentage: 0,
   timezone: 'Europe/London',
   checkInTime: '15:00',
   checkOutTime: '10:00',
@@ -54,6 +56,9 @@ describe('Property editor', () => {
     fireEvent.change(screen.getByLabelText('House rules'), {
       target: { value: 'No smoking\nPlease call before arrival' },
     });
+    fireEvent.change(screen.getByLabelText('Property type'), {
+      target: { value: 'apartment' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() =>
       expect(api.patch).toHaveBeenCalledWith(
@@ -62,6 +67,7 @@ describe('Property editor', () => {
           description: 'Edited description',
           expectedUpdatedAt: original.updatedAt,
           publicListing: expect.objectContaining({
+            propertyType: 'apartment',
             houseRules: ['No smoking', 'Please call before arrival'],
           }),
         }),

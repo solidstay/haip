@@ -25,6 +25,10 @@ class PublicMapDto {
 }
 /** Explicit guest-facing content. Financial policies remain in the rate engine. */
 export class PublicListingDto {
+  @ApiPropertyOptional({ nullable: true, enum: ['hotel', 'apartment', 'serviced_apartment', 'aparthotel', 'holiday_home'] })
+  @IsOptional()
+  @IsIn(['hotel', 'apartment', 'serviced_apartment', 'aparthotel', 'holiday_home'])
+  propertyType?: 'hotel' | 'apartment' | 'serviced_apartment' | 'aparthotel' | 'holiday_home' | null;
   @ApiPropertyOptional()
   @IsArray()
   @ArrayMaxSize(100)

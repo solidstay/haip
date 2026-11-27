@@ -78,6 +78,8 @@ describe('Property content editing', () => {
     { checkInUntil: '25:00' },
     { houseRules: ['x'.repeat(2001)] },
     { amenities: [42] },
+    { propertyType: 'invented' },
+    { propertyType: 42 },
     { address: { streetAddress: 'a', postalCode: 42 } },
   ])('rejects invalid nested public content %j', async (bad) => {
     const dto = plainToInstance(UpdatePropertyDto, {
@@ -94,5 +96,10 @@ describe('Property content editing', () => {
         }),
       ),
     ).toEqual([]);
+  });
+  it.each(['hotel', 'apartment', 'serviced_apartment', 'aparthotel', 'holiday_home', null])('accepts configured or cleared property type %s', async propertyType => {
+    expect(await validate(plainToInstance(UpdatePropertyDto, {
+      publicListing: { ...listing, propertyType },
+    }))).toEqual([]);
   });
 });

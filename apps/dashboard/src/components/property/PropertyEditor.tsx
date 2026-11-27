@@ -324,6 +324,17 @@ function PropertyForm({
             {text('name', 'Property name', { required: true, maxLength: 255 })}
             {text('code', 'Internal code', { required: true, maxLength: 20 })}
           </div>
+          <Field label="Property type" hint="Used by guest search filters. Choose the category that describes this property.">
+            <select className={control} value={listing.propertyType ?? ''}
+              onChange={(e) => editListing('propertyType', e.target.value || null)}>
+              <option value="">Not specified</option>
+              <option value="hotel">Hotel</option>
+              <option value="apartment">Apartment</option>
+              <option value="serviced_apartment">Serviced apartments</option>
+              <option value="aparthotel">Aparthotel</option>
+              <option value="holiday_home">Holiday home</option>
+            </select>
+          </Field>
           <Field
             label="Property description"
             hint="Describe the space and what guests can expect. Add house rules in the separate section below."
