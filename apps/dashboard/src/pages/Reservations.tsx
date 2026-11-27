@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Menu } from '@base-ui/react/menu';
 import { formatMoney } from '../lib/money';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -125,7 +126,6 @@ function ReservationList() {
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
   const [detailRes, setDetailRes] = useState<Reservation | null>(null);
-  const [actionMenu, setActionMenu] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Bulk actions + import
@@ -397,49 +397,52 @@ function ReservationList() {
       header: t('reservations.actions'),
       size: 50,
       cell: ({ row }) => (
-        <div className="relative">
-          <button
-            onClick={(e) => { e.stopPropagation(); setActionMenu(actionMenu === row.original.id ? null : row.original.id); }}
-            className="p-1 rounded hover:bg-telivity-light-grey"
+        <Menu.Root modal={false}>
+          <Menu.Trigger
+            aria-label={`${t('reservations.actions')} · ${row.original.confirmationNumber}`}
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg hover:bg-telivity-light-grey"
           >
-            <MoreHorizontal size={16} />
-          </button>
-          {actionMenu === row.original.id && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-1 w-40" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => { setDetailRes(row.original); setActionMenu(null); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-telivity-light-grey flex items-center gap-2">
-                <Eye size={14} /> {t('reservations.viewDetails')}
-              </button>
-              {row.original.status === 'pending' && (
-                <button onClick={() => { api.patch(`/v1/reservations/${row.original.id}/confirm`).then(() => queryClient.invalidateQueries({ queryKey: ['reservations'] })); setActionMenu(null); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-telivity-light-grey flex items-center gap-2">
-                  <Pencil size={14} /> {t('reservations.confirm')}
-                </button>
-              )}
-              {['confirmed', 'assigned'].includes(row.original.status) && (
-                <button onClick={() => { setActionMenu(null); navigate('/front-desk'); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-telivity-light-grey flex items-center gap-2">
-                  <LogIn size={14} /> {t('reservations.checkIn')}
-                </button>
-              )}
-              {row.original.status === 'checked_in' && (
-                <button onClick={() => { api.patch(`/v1/reservations/${row.original.id}/check-out`, {}).then(() => queryClient.invalidateQueries({ queryKey: ['reservations'] })); setActionMenu(null); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-telivity-light-grey flex items-center gap-2">
-                  <LogOut size={14} /> {t('reservations.checkOut')}
-                </button>
-              )}
-              {['confirmed', 'assigned', 'pending'].includes(row.original.status) && (
-                <button onClick={() => { if (confirm(t('reservations.confirmNoShow'))) { markNoShow(row.original.id); } setActionMenu(null); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-telivity-light-grey flex items-center gap-2">
-                  <UserX size={14} /> {t('reservations.markNoShow')}
-                </button>
-              )}
-              {!['cancelled', 'checked_out', 'no_show'].includes(row.original.status) && (
-                <button onClick={() => { if (confirm(t('reservations.confirmCancellation'))) { cancelReservation(row.original.id); } setActionMenu(null); }} className="w-full text-left px-3 py-1.5 text-sm text-telivity-orange hover:bg-telivity-light-grey flex items-center gap-2">
-                  <Ban size={14} /> {t('common.cancel')}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            <MoreHorizontal size={16} aria-hidden="true" />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner align="end" sideOffset={4} collisionPadding={8} className="z-50">
+              <Menu.Popup aria-label={`${t('reservations.actions')} · ${row.original.confirmationNumber}`} className="max-h-[var(--available-height)] w-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg outline-none" onClick={(event) => event.stopPropagation()}>
+                <Menu.Item onClick={() => { setDetailRes(row.original); }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                  <Eye size={14} /> {t('reservations.viewDetails')}
+                </Menu.Item>
+                {row.original.status === 'pending' && (
+                  <Menu.Item onClick={() => { api.patch(`/v1/reservations/${row.original.id}/confirm`).then(() => queryClient.invalidateQueries({ queryKey: ['reservations'] })); }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                    <Pencil size={14} /> {t('reservations.confirm')}
+                  </Menu.Item>
+                )}
+                {['confirmed', 'assigned'].includes(row.original.status) && (
+                  <Menu.Item onClick={() => { navigate('/front-desk'); }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                    <LogIn size={14} /> {t('reservations.checkIn')}
+                  </Menu.Item>
+                )}
+                {row.original.status === 'checked_in' && (
+                  <Menu.Item onClick={() => { api.patch(`/v1/reservations/${row.original.id}/check-out`, {}).then(() => queryClient.invalidateQueries({ queryKey: ['reservations'] })); }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                    <LogOut size={14} /> {t('reservations.checkOut')}
+                  </Menu.Item>
+                )}
+                {['confirmed', 'assigned', 'pending'].includes(row.original.status) && (
+                  <Menu.Item onClick={() => { if (confirm(t('reservations.confirmNoShow'))) { markNoShow(row.original.id); } }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                    <UserX size={14} /> {t('reservations.markNoShow')}
+                  </Menu.Item>
+                )}
+                {!['cancelled', 'checked_out', 'no_show'].includes(row.original.status) && (
+                  <Menu.Item onClick={() => { if (confirm(t('reservations.confirmCancellation'))) { cancelReservation(row.original.id); } }} className="w-full text-left px-3 min-h-[44px] py-2 text-sm text-telivity-orange hover:bg-telivity-light-grey data-[highlighted]:bg-telivity-light-grey outline-none flex items-center gap-2">
+                    <Ban size={14} /> {t('common.cancel')}
+                  </Menu.Item>
+                )}
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       ),
     },
-  ], [actionMenu, queryClient, navigate, cancelReservation, markNoShow, selectedIds, allOnPageSelected, pageIds, t]);
+  ], [queryClient, navigate, cancelReservation, markNoShow, selectedIds, allOnPageSelected, pageIds, currencyCode, t]);
 
   const table = useReactTable({
     data: reservations,
@@ -457,7 +460,7 @@ function ReservationList() {
   }
 
   return (
-    <div onClick={() => setActionMenu(null)}>
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <CalendarDays size={24} className="text-telivity-teal" />
         <h1 className="text-2xl font-semibold text-telivity-navy">{t('reservations.title')}</h1>
@@ -549,7 +552,7 @@ function ReservationList() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div role="region" aria-label={t('reservations.title')} tabIndex={0} className="bg-white rounded-xl shadow-sm overflow-x-auto">
         <table className="w-full">
           <thead>
             {table.getHeaderGroups().map((hg) => (

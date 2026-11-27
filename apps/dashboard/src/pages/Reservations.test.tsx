@@ -157,3 +157,37 @@ describe('Reservations — unassigned queue', () => {
     );
   });
 });
+
+
+describe('Reservations — row action menu', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (api.get as any).mockImplementation((url: string) => Promise.resolve({ data: url === '/v1/reservations' ? [RES_ROW] : [] }));
+  });
+
+  it('renders outside the clipped table and restores keyboard focus on Escape', async () => {
+    renderAt('/');
+    const trigger = await screen.findByRole('button', { name: 'Actions · HAIP-0001' });
+    trigger.focus();
+    await userEvent.keyboard('{ArrowDown}');
+    const menu = await screen.findByRole('menu');
+    expect(menu.closest('table')).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'View Details' })).toHaveFocus();
+    expect(screen.queryByRole('heading', { name: 'Reservation Details' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('opens details only when selected and dismisses the menu', async () => {
+    renderAt('/');
+    await userEvent.click(await screen.findByRole('button', { name: 'Actions · HAIP-0001' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'View Details' }));
+    expect(screen.getByRole('heading', { name: 'Reservation Details' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+  });
+});
