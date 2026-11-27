@@ -1720,6 +1720,14 @@
     "totalReviews": "Total Reviews"
   },
   "rooms": {
+    "cardView": "Card view",
+    "listView": "List view",
+    "openRoom": "View {{number}} · {{name}}",
+    "loadingPhoto": "Loading photo…",
+    "typeUnavailable": "Room type unavailable",
+    "guestCapacity_one": "Up to {{count}} guest",
+    "guestCapacity_other": "Up to {{count}} guests",
+    "viewDetails": "View details",
     "addFeature": "Add a feature…",
     "addRoom": "Add Room",
     "bedType": "Bed Type",

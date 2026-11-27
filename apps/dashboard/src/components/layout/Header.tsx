@@ -60,7 +60,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               aria-haspopup="listbox"
               aria-expanded={open}
             >
-              <span className="truncate max-w-[140px] sm:max-w-none">{propertyLabel}</span>
+              <span className="truncate max-w-[140px] sm:max-w-[240px] 2xl:max-w-[320px]" title={propertyLabel}>{propertyLabel}</span>
               <ChevronDown size={14} />
             </button>
             {open && (

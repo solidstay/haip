@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { useMediaList } from '../hooks/useMedia';
 import StatusBadge from '../components/ui/StatusBadge';
+import RoomCard from '../components/rooms/RoomCard';
 import Modal from '../components/ui/Modal';
 import MediaGallery from '../components/media/MediaGallery';
 
@@ -48,17 +49,6 @@ interface StatusCount {
   status: string;
   count: number;
 }
-
-const STATUS_CARD_COLORS: Record<string, string> = {
-  occupied: 'border-telivity-teal bg-telivity-teal/5',
-  vacant_clean: 'border-telivity-dark-teal bg-telivity-dark-teal/5',
-  vacant_dirty: 'border-telivity-orange bg-telivity-orange/5',
-  clean: 'border-telivity-dark-teal bg-telivity-dark-teal/5',
-  inspected: 'border-telivity-deep-blue bg-telivity-deep-blue/5',
-  guest_ready: 'border-telivity-dark-teal bg-telivity-dark-teal/5',
-  out_of_order: 'border-telivity-yellow bg-telivity-yellow/5',
-  out_of_service: 'border-telivity-mid-grey bg-gray-50',
-};
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   vacant_dirty: ['clean'],
@@ -300,9 +290,15 @@ function RoomList() {
     enabled: !!propertyId,
   });
 
-  const rooms: Room[] = roomsData?.data ?? roomsData ?? [];
+  const rawRooms: Room[] = roomsData?.data ?? roomsData ?? [];
   const summary: StatusCount[] = summaryData?.data ?? summaryData ?? [];
   const types: RoomType[] = typesData?.data ?? typesData ?? [];
+  const typesById = new Map(types.map((type) => [type.id, type]));
+  // The room list returns type IDs; resolve names for cards, list and details.
+  const rooms = rawRooms.map((room) => ({
+    ...room,
+    roomTypeName: typesById.get(room.roomTypeId)?.name ?? room.roomTypeName,
+  }));
 
   const diaryByRoomId = useMemo(() => {
     const map = new Map<string, RoomDiaryEntry>();
@@ -344,16 +340,16 @@ function RoomList() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
         <DoorOpen size={24} className="text-telivity-teal" />
         <h1 className="text-2xl font-semibold text-telivity-navy">{t('rooms.title')}</h1>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <Link to={`/rooms/types?propertyId=${encodeURIComponent(propertyId)}`} className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-telivity-navy hover:bg-telivity-light-grey">
             {t('rooms.roomTypes')}
           </Link>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-            <button onClick={() => setView('rack')} className={`p-2 ${view === 'rack' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><LayoutGrid size={16} /></button>
-            <button onClick={() => setView('list')} className={`p-2 ${view === 'list' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><List size={16} /></button>
+            <button aria-label={t('rooms.cardView', { defaultValue: 'Card view' })} aria-pressed={view === 'rack'} onClick={() => setView('rack')} className={`p-3 ${view === 'rack' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><LayoutGrid size={16} /></button>
+            <button aria-label={t('rooms.listView', { defaultValue: 'List view' })} aria-pressed={view === 'list'} onClick={() => setView('list')} className={`p-3 ${view === 'list' ? 'bg-telivity-teal text-white' : 'hover:bg-telivity-light-grey'}`}><List size={16} /></button>
           </div>
           <button onClick={() => setCreateOpen(true)} className="flex items-center gap-2 bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-telivity-light-teal transition-colors">
             <Plus size={16} /> {t('rooms.addRoom')}
@@ -401,29 +397,17 @@ function RoomList() {
           {Object.entries(roomsByFloor).sort(([a], [b]) => Number(a) - Number(b)).map(([floor, floorRooms]) => (
             <div key={floor}>
               <h3 className="text-xs font-semibold text-telivity-mid-grey uppercase tracking-wider mb-2">{t('rooms.floorNumber', { floor })}</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {floorRooms.sort((a, b) => a.number.localeCompare(b.number)).map((room) => {
-                  const diary = diaryByRoomId.get(room.id);
-                  return (
-                  <div
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                {floorRooms.sort((a, b) => a.number.localeCompare(b.number)).map((room) => (
+                  <RoomCard
                     key={room.id}
-                    onClick={() => setDetailRoom(room)}
-                    className={`border-2 rounded-xl p-3 cursor-pointer transition-all hover:shadow-md ${STATUS_CARD_COLORS[room.status] ?? 'border-gray-200'}`}
-                  >
-                    <p className="text-sm font-semibold text-telivity-navy">{room.number}</p>
-                    <p className="text-[10px] text-telivity-mid-grey truncate">{room.roomTypeName ?? ''}</p>
-                    <StatusBadge status={room.status} label={t(`dashboard.roomStatuses.${room.status}`, { defaultValue: room.status })} className="mt-1.5 text-[9px] px-1.5 py-0" />
-                    {diary ? (
-                      <>
-                        <p className="text-[10px] text-telivity-slate mt-1 truncate font-medium">{diary.guestName ?? t('rooms.none')}</p>
-                        <p className="text-[9px] text-telivity-mid-grey truncate">{diary.arrivalDate} → {diary.departureDate}</p>
-                      </>
-                    ) : room.guestName ? (
-                      <p className="text-[10px] text-telivity-slate mt-1 truncate">{room.guestName}</p>
-                    ) : null}
-                  </div>
-                  );
-                })}
+                    room={room}
+                    roomType={typesById.get(room.roomTypeId)}
+                    propertyId={propertyId}
+                    diary={diaryByRoomId.get(room.id)}
+                    onOpen={() => setDetailRoom(room)}
+                  />
+                ))}
               </div>
             </div>
           ))}
