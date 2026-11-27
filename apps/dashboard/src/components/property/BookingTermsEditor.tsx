@@ -201,7 +201,8 @@ function TermsForm({
         type={type}
         required={required}
         min={type === 'number' ? 0 : undefined}
-        step={type === 'number' ? 'any' : undefined}
+        step={type === 'number' ? (key === 'freeCancelHoursBeforeArrival' ? '1' : '0.01') : undefined}
+        max={key === 'penaltyPercentage' ? 100 : undefined}
         maxLength={maxLength}
         value={draft[key] ?? ''}
         onChange={(e) =>

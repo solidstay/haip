@@ -190,6 +190,7 @@ function PropertyForm({
       <input
         className={control}
         type="number"
+        required={key === 'overbookingPercentage'}
         min={min}
         max={max}
         step="1"
@@ -592,7 +593,7 @@ function PropertyForm({
                 required: true,
                 maxLength: 3,
               })}
-              {text('defaultLanguage', 'Default language', { maxLength: 5 })}
+              {text('defaultLanguage', 'Default language', { required: true, maxLength: 5 })}
               {number('starRating', 'Verified star rating', 1, 5)}
               {number(
                 'overbookingPercentage',
