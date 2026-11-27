@@ -7,9 +7,9 @@ import RoomDetails from './RoomDetails';
 import { api } from '../../lib/api';
 vi.mock('../../context/PropertyContext', () => ({ useProperty: () => ({ propertyId: 'property-1', currencyCode: 'GBP' }) }));
 let allowed = true;
-vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ hasRole: () => allowed, hasPermission: () => allowed }) }));
+vi.mock('../../context/AuthContext', () => ({ useAuth: () => ({ hasRole: (...roles: string[]) => allowed && roles.includes('admin'), hasPermission: () => allowed }) }));
 vi.mock('../../lib/api', () => ({ api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn() } }));
-vi.mock('../media/MediaGallery', () => ({ default: ({ ownerType, ownerId }: any) => <div data-testid={`gallery-${ownerType}`}>{ownerId}</div> }));
+vi.mock('../media/MediaGallery', () => ({ default: ({ ownerType, ownerId, canManage }: any) => <div data-testid={`gallery-${ownerType}`}>{ownerId}{canManage && <button>Upload a file</button>}</div> }));
 vi.mock('../property/BookingTermsEditor', () => ({ RateTermsEditor: ({ row }: any) => <p>Rate editor: {row.name}</p> }));
 const room = { id: 'room-1', number: '101', roomTypeId: 'type-1', status: 'vacant_clean' };
 const listing = { id: 'type-1', name: 'Garden room', maxOccupancy: 2, defaultOccupancy: 2, code: 'GARDEN', bedCount: 1, sortOrder: 0, amenities: ['WiFi'] };
@@ -38,6 +38,7 @@ describe('Individual room page', () => {
     open();
     expect(await screen.findByRole('heading', { name: 'Garden room' })).toBeVisible();
     expect(screen.getByTestId('gallery-room_type')).toHaveTextContent('type-1');
+    expect(screen.getByRole('button', { name: 'Upload a file' })).toBeVisible();
     expect(screen.queryByTestId('gallery-room')).not.toBeInTheDocument();
     expect(await screen.findByText('Rate editor: Garden nightly')).toBeVisible();
     expect(screen.queryByText('Rate editor: Other nightly')).not.toBeInTheDocument();
@@ -89,6 +90,7 @@ describe('Individual room page', () => {
     allowed = false; open(); await screen.findByRole('heading', { name: 'Garden room' });
     expect(api.get).not.toHaveBeenCalledWith('/v1/rate-plans', expect.anything());
     expect(api.post).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Upload a file' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save room details' })).toBeDisabled();
   });
 });
