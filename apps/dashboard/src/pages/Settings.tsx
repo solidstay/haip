@@ -2,10 +2,10 @@ import { useDashboardFeatures } from '../context/DashboardFeaturesContext';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings as SettingsIcon, Building, Link2, Shield, ShieldCheck, Image as ImageIcon, Globe } from 'lucide-react';
+import { Settings as SettingsIcon, Building, Link2, Shield, ShieldCheck, Globe } from 'lucide-react';
 import { api } from '../lib/api';
 import { useProperty } from '../context/PropertyContext';
-import MediaGallery from '../components/media/MediaGallery';
+import MediaLibrarySummary from '../components/media/MediaLibrarySummary';
 import UserSettings from '../components/admin/UserSettings';
 import RolesSettings from '../components/admin/RolesSettings';
 import BookingEngineSettings from '../components/admin/BookingEngineSettings';
@@ -170,11 +170,7 @@ function PropertySettings({ propertyId, queryClient }: { propertyId: string; que
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="mb-8 border-b border-gray-100 pb-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ImageIcon size={16} className="text-telivity-teal" />
-          <h2 className="text-sm font-semibold text-telivity-navy">{t('settings.propertyPhotos')}</h2>
-        </div>
-        <MediaGallery propertyId={propertyId} ownerType="property" ownerId={propertyId} />
+        <MediaLibrarySummary key={propertyId} propertyId={propertyId} />
       </div>
       <h2 className="text-sm font-semibold text-telivity-navy mb-4">{t('settings.propertyInformation')}</h2>
       <div className="space-y-4 max-w-xl">
