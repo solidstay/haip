@@ -35,11 +35,13 @@ ARG VITE_KEYCLOAK_CLIENT_ID=haip-dashboard
 # Must match the API's HAIP_BOOKING_REQUESTS at deploy time, or the module can
 # be enabled server-side while the UIs compile it out (see booking-engine-config.service.ts).
 ARG VITE_HAIP_BOOKING_REQUESTS=false
+ARG VITE_WEBSITE_API_URL=
 ENV VITE_AUTH_ENABLED=$VITE_AUTH_ENABLED \
     VITE_KEYCLOAK_URL=$VITE_KEYCLOAK_URL \
     VITE_KEYCLOAK_REALM=$VITE_KEYCLOAK_REALM \
     VITE_KEYCLOAK_CLIENT_ID=$VITE_KEYCLOAK_CLIENT_ID \
-    VITE_HAIP_BOOKING_REQUESTS=$VITE_HAIP_BOOKING_REQUESTS
+    VITE_HAIP_BOOKING_REQUESTS=$VITE_HAIP_BOOKING_REQUESTS \
+    VITE_WEBSITE_API_URL=$VITE_WEBSITE_API_URL
 
 # Build dashboard (Vite static output)
 RUN pnpm --filter dashboard run build

@@ -11,6 +11,7 @@ import { isBookingRequestsUiEnabled } from './lib/bookingRequestsFeature';
 
 const Properties = lazy(() => import('./pages/Properties'));
 const AdminFeatures = lazy(() => import('./pages/AdminFeatures'));
+const WebsitePages = lazy(() => import('./pages/WebsitePages'));
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FrontDesk = lazy(() => import('./pages/FrontDesk'));
@@ -47,6 +48,7 @@ export default function App() {
     <AdminLayout><ErrorBoundary><Suspense fallback={<SkeletonPage />}>
       <Routes>
         <Route path="/admin/features" element={<AdminFeatures />} />
+        <Route path="/admin/website/pages/:pageId?" element={<WebsitePages />} />
         <Route path="*" element={<Navigate to="/admin/features" replace />} />
       </Routes>
     </Suspense></ErrorBoundary></AdminLayout>
