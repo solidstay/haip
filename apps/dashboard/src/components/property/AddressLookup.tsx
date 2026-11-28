@@ -70,7 +70,10 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
           setSelected(value); onSelect(item);
           setStatus(item.source === 'postcode' ? 'Postcode filled. Enter the building, street and town below.' : 'Address details filled. Check the building, street, town and postcode before saving.');
         }} />
+      <p className="mt-2 text-xs leading-5 text-telivity-slate">
+        {kind === 'postcode' ? <a className="underline" href="https://postcodes.io/docs/licences/" target="_blank" rel="noreferrer">Postcode data credits</a>
+          : <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
+      </p>
     </div>}
-    <p className="text-xs leading-5 text-telivity-slate">Address suggestions: <a className="underline" href="https://photon.komoot.io" target="_blank" rel="noreferrer">Photon</a> / <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>. UK postcodes: <a className="underline" href="https://postcodes.io" target="_blank" rel="noreferrer">Postcodes.io</a>. Coverage varies; check the suggested details.</p>
   </div>;
 }

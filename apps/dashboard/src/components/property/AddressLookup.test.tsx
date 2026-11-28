@@ -10,10 +10,12 @@ describe('Property address search', () => {
     const onSelect = vi.fn(); const item = { id: '1', label: '12 Test Street, Test Town', source: 'address', countryCode: 'GB', addressLine1: '12 Test Street', city: 'Test Town' };
     get.mockResolvedValue({ data: [item] });
     render(<AddressLookup countryCode="GB" onSelect={onSelect} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Find an address'), 'Test Street');
     expect(get).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Search address' }));
     expect(await screen.findByText(/1 suggestions found/)).toBeVisible();
+    expect(screen.getByRole('link', { name: '© OpenStreetMap contributors' })).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
     expect(onSelect).not.toHaveBeenCalled();
     await userEvent.click(screen.getByLabelText('Choose a match'));
     await userEvent.click(await screen.findByRole('option', {name: item.label}));
