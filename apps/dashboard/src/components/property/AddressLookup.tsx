@@ -3,7 +3,7 @@ import { api } from '../../lib/api';
 import { ReferenceSelect } from './ReferenceSelect';
 
 export type AddressSuggestion = {
-  id: string; label: string; source: 'address' | 'postcode'; countryCode: string;
+  id: string; label: string; source: 'address'; countryCode: string;
   addressLine1?: string; city?: string; stateProvince?: string; postalCode?: string;
 };
 const inputClass = 'min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-telivity-navy focus:outline-none focus:ring-2 focus:ring-telivity-teal/40';
@@ -12,7 +12,6 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
 }) {
   const id = useId();
   const [query, setQuery] = useState('');
-  const [kind, setKind] = useState('address');
   const [items, setItems] = useState<AddressSuggestion[]>([]);
   const [selected, setSelected] = useState('');
   const [status, setStatus] = useState('');
@@ -22,7 +21,7 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
   function clear() {
     generation.current++; request.current?.abort(); setItems([]); setSelected(''); setStatus(''); setBusy(false);
   }
-  useEffect(() => { if (countryCode !== 'GB') setKind('address'); clear(); return () => { generation.current++; request.current?.abort(); }; }, [countryCode, kind]);
+  useEffect(() => { clear(); return () => { generation.current++; request.current?.abort(); }; }, [countryCode]);
   async function search() {
     if (!countryCode || query.trim().length < 3 || busy || disabled) return;
     const current = ++generation.current;
@@ -30,7 +29,7 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
     setBusy(true); setStatus('Searching…'); setItems([]); setSelected('');
     try {
       const response = await api.get('/v1/properties/location-search', {
-        params: { q: query.trim(), country: countryCode, kind, propertyId: undefined },
+        params: { q: query.trim(), country: countryCode, propertyId: undefined },
         signal: request.current.signal, skipErrorToast: true,
       });
       if (generation.current !== current) return;
@@ -43,15 +42,9 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
   }
   return <div className="space-y-3">
     <label htmlFor={id} className="block text-sm font-medium text-telivity-navy">Find an address</label>
-    {countryCode === 'GB' && <div className="flex flex-wrap gap-4 text-sm">
-      {['address', 'postcode'].map(value => <label key={value} className="flex min-h-[44px] items-center gap-2">
-        <input type="radio" name={`${id}-kind`} checked={kind === value} disabled={disabled} onChange={() => setKind(value)} />
-        {value === 'address' ? 'Street or property name' : 'UK postcode'}
-      </label>)}
-    </div>}
     <div className="flex flex-col gap-2 sm:flex-row">
       <input id={id} className={inputClass} value={query} maxLength={160} disabled={disabled || !countryCode}
-        placeholder={kind === 'postcode' && countryCode === 'GB' ? 'Enter a full or partial postcode' : 'Enter a street, building or property name'}
+        placeholder="Enter a street, building or property name"
         autoComplete="off" aria-describedby={`${id}-hint ${id}-status`}
         onChange={e => { clear(); setQuery(e.target.value); }}
         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void search(); } }} />
@@ -68,11 +61,10 @@ export default function AddressLookup({ countryCode, onSelect, disabled }: {
         options={items.map(item => ({value: item.id, label: item.label}))}
         onChange={value => { const item = items.find(item => item.id === value); if (!item) return;
           setSelected(value); onSelect(item);
-          setStatus(item.source === 'postcode' ? 'Postcode filled. Enter the building, street and town below.' : 'Address details filled. Check the building, street, town and postcode before saving.');
+          setStatus('Address details filled. Check the building, street, town and postcode before saving.');
         }} />
       <p className="mt-2 text-xs leading-5 text-telivity-slate">
-        {kind === 'postcode' ? <a className="underline" href="https://postcodes.io/docs/licences/" target="_blank" rel="noreferrer">Postcode data credits</a>
-          : <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
+        <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
       </p>
     </div>}
   </div>;

@@ -372,10 +372,8 @@ function PropertyForm({
         >
           <Field label="Country"><ReferenceSelect value={draft.countryCode ?? ''} onChange={value => edit('countryCode', value)} options={countryOptions} className={control} required disabled={saving} /></Field>
           <AddressLookup countryCode={draft.countryCode ?? ''} disabled={saving} onSelect={item => {
-            if (item.source === 'address') {
-              edit('addressLine1', item.addressLine1 ?? ''); edit('addressLine2', '');
-              edit('city', item.city ?? ''); edit('stateProvince', item.stateProvince ?? '');
-            }
+            edit('addressLine1', item.addressLine1 ?? ''); edit('addressLine2', '');
+            edit('city', item.city ?? ''); edit('stateProvince', item.stateProvince ?? '');
             edit('postalCode', item.postalCode ?? '');
           }} />
           {text('addressLine1', 'Address line 1', { maxLength: 255 })}

@@ -16,13 +16,7 @@ describe('Staff property location lookup', () => {
     expect(await service.search('test street', 'GB', 'address')).toEqual(result);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it('never treats a postcode administrative district as a city or street address', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: [{ postcode: 'SW1A 1AA', admin_district: 'Westminster' }] }) }));
-    const [result] = await new PropertyLocationService().search('SW1A', 'GB', 'postcode');
-    expect(result).toMatchObject({ postalCode: 'SW1A 1AA', label: 'SW1A 1AA — Westminster' });
-    expect(result).not.toHaveProperty('city'); expect(result).not.toHaveProperty('addressLine1');
-  });
-  it.each([['ab','GB','address'],['street','ZZ','address'],['SW1','FR','postcode'],['street','GB','unknown']])('rejects invalid lookup %s/%s/%s before network access', async (q, country, kind) => {
+  it.each([['ab','GB','address'],['street','ZZ','address'],['SW1A 1AA','GB','postcode'],['street','GB','unknown']])('rejects invalid lookup %s/%s/%s before network access', async (q, country, kind) => {
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
     await expect(new PropertyLocationService().search(q!, country!, kind!)).rejects.toThrow();
     expect(fetcher).not.toHaveBeenCalled();

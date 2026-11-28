@@ -139,11 +139,9 @@ export default function AddProperty() {
           {reference('countryCode', 'Country', countryOptions)}
           {reference('timezone', 'Timezone', timezoneOptions)}
           <div className="sm:col-span-2"><AddressLookup countryCode={countryCode} disabled={isSubmitting} onSelect={item => {
-            if (item.source === 'address') {
-              setValue('addressLine1', item.addressLine1 ?? '', { shouldDirty: true });
-              setValue('city', item.city ?? '', { shouldDirty: true });
-              setValue('stateProvince', item.stateProvince ?? '', { shouldDirty: true });
-            }
+            setValue('addressLine1', item.addressLine1 ?? '', { shouldDirty: true });
+            setValue('city', item.city ?? '', { shouldDirty: true });
+            setValue('stateProvince', item.stateProvince ?? '', { shouldDirty: true });
             setValue('postalCode', item.postalCode ?? '', { shouldDirty: true });
           }} /></div>
           {field('addressLine1', optional, { maxLength: 255, autoComplete: 'address-line1' })}

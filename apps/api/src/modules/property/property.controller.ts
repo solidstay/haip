@@ -49,7 +49,7 @@ export class PropertyController {
   // Reference lookup does not read tenant data; authenticated staff only.
   @Get('location-search')
   @Roles('admin', 'general_manager')
-  @ApiOperation({ summary: 'Find property address or UK postcode suggestions' })
+  @ApiOperation({ summary: 'Find property address suggestions' })
   searchLocation(@Query('q') q: string, @Query('country') country: string, @Query('kind') kind = 'address') {
     return this.locations!.search(q, country, kind);
   }

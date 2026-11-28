@@ -11,6 +11,7 @@ describe('Property address search', () => {
     get.mockResolvedValue({ data: [item] });
     render(<AddressLookup countryCode="GB" onSelect={onSelect} />);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Find an address'), 'Test Street');
     expect(get).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Search address' }));
@@ -22,11 +23,10 @@ describe('Property address search', () => {
     expect(onSelect).toHaveBeenCalledWith(item);
     expect(screen.getByRole('status')).toHaveTextContent('Check the building');
   });
-  it('discards an in-flight search when the country changes and resets postcode mode', async () => {
+  it('discards an in-flight search when the country changes ', async () => {
     let resolve!: (value: unknown) => void; get.mockReturnValue(new Promise(r => { resolve = r; }));
     const {rerender} = render(<AddressLookup countryCode="GB" onSelect={vi.fn()} />);
-    await userEvent.click(screen.getByLabelText('UK postcode'));
-    await userEvent.type(screen.getByLabelText('Find an address'), 'SW1A');
+    await userEvent.type(screen.getByLabelText('Find an address'), 'Test Street');
     await userEvent.click(screen.getByRole('button', {name: 'Search address'}));
     rerender(<AddressLookup countryCode="FR" onSelect={vi.fn()} />);
     await act(async () => resolve({ data: [{id:'stale', label:'Stale result'}] }));
