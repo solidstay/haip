@@ -21,3 +21,15 @@ describe('Property setup and activation input', () => {
     expect(validateSync(plainToInstance(UpdatePropertyDto, { isActive }))).not.toEqual([]);
   });
 });
+
+describe('Property reference fields', () => {
+  it.each([{ countryCode: 'ZZ' }, { currencyCode: 'ABC' }, { timezone: 'Not/AZone' }])('rejects unrecognised values %o', fields => {
+    expect(errors({ ...input, ...fields }).length).toBeGreaterThan(0);
+    expect(validateSync(plainToInstance(UpdatePropertyDto, fields)).length).toBeGreaterThan(0);
+  });
+  it('normalizes country and currency codes without inventing a timezone', () => {
+    const dto = plainToInstance(CreatePropertyDto, { ...input, countryCode: ' gb ', currencyCode: 'gbp', timezone: ' UTC ' });
+    expect(validateSync(dto)).toEqual([]);
+    expect(dto).toMatchObject({ countryCode: 'GB', currencyCode: 'GBP', timezone: 'UTC' });
+  });
+});

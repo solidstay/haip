@@ -1,5 +1,7 @@
 import {
   Controller,
+  Query,
+  Optional,
   Get,
   Post,
   Patch,
@@ -13,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { userCanAccessProperty } from '../auth/property-access';
+import { PropertyLocationService } from './property-location.service';
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -24,6 +27,7 @@ export class PropertyController {
   constructor(
     private readonly propertyService: PropertyService,
     private readonly configService: ConfigService,
+    @Optional() private readonly locations?: PropertyLocationService,
   ) {}
 
   private authOn(): boolean {
@@ -40,6 +44,14 @@ export class PropertyController {
     // caller's memberships here; demo (auth off) returns everything.
     if (!this.authOn() || !user) return all;
     return all.filter((p) => userCanAccessProperty(user, p.id));
+  }
+
+  // Reference lookup does not read tenant data; authenticated staff only.
+  @Get('location-search')
+  @Roles('admin', 'general_manager')
+  @ApiOperation({ summary: 'Find property address or UK postcode suggestions' })
+  searchLocation(@Query('q') q: string, @Query('country') country: string, @Query('kind') kind = 'address') {
+    return this.locations!.search(q, country, kind);
   }
 
   @Get(':id')

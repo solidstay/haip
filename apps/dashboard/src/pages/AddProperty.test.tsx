@@ -13,8 +13,13 @@ function setup() { render(<MemoryRouter initialEntries={['/properties/new?proper
 async function fill() {
   for (const [label, value] of [
     ['Property name', '  Test accommodation  '], ['Property code', '  TEST-ADD  '],
-    ['Number of rooms or units', '2'], ['Currency code', 'gbp'], ['Country code', 'gb'], ['Timezone', 'Europe/London'],
+    ['Number of rooms or units', '2'],
   ]) await userEvent.type(screen.getByLabelText(`${label} *`), value);
+  for (const [label, query, match] of [['Currency', 'GBP', /British Pound/], ['Country', 'United Kingdom', /United Kingdom/], ['Timezone', 'London', /Europe\/London/]] as const) {
+    await userEvent.click(screen.getByLabelText(`${label} *`));
+    await userEvent.type(await screen.findByLabelText('Search options'), query);
+    await userEvent.click(await screen.findByRole('option', {name: match}));
+  }
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.admin = true; mocks.post.mockResolvedValue({ data: { data: { id: 'new-property', name: 'Test accommodation', code: 'TEST-ADD', currencyCode: 'GBP' } } }); });
 
@@ -41,15 +46,17 @@ describe('Add property', () => {
     expect(screen.getByLabelText('Check-in time *')).toHaveValue('15:00');
     expect(mocks.post).toHaveBeenCalledTimes(1);
   });
-  it('blocks missing fields and invalid timezone and room count before writing', async () => {
+  it('blocks missing fields, unknown timezone choices and fractional room count before writing', async () => {
     setup(); await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
     expect(screen.getByLabelText('Property name *')).toHaveFocus();
     expect(mocks.post).not.toHaveBeenCalled();
     await fill();
-    fireEvent.change(screen.getByLabelText('Timezone *'), { target: { value: 'Not/AZone' } });
+    await userEvent.click(screen.getByLabelText('Timezone *'));
+    await userEvent.type(await screen.findByLabelText('Search options'), 'Not/AZone');
+    expect(await screen.findByText('No matches. Try a name or code.')).toBeVisible();
+    await userEvent.keyboard('{Escape}');
     fireEvent.change(screen.getByLabelText('Number of rooms or units *'), { target: { value: '1.5' } });
     await userEvent.click(screen.getByRole('button', { name: 'Create property' }));
-    expect(await screen.findByText('Enter a valid timezone, for example Europe/London.')).toBeInTheDocument();
     expect(screen.getByText('Enter a whole number of at least 1.')).toBeInTheDocument();
     expect(mocks.post).not.toHaveBeenCalled();
   });

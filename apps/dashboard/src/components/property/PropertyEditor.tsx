@@ -1,3 +1,6 @@
+import { ReferenceSelect, countryOptions, currencyOptions, timezoneOptions } from './ReferenceSelect';
+import AddressLookup from './AddressLookup';
+import { normalizePostalCode, PROPERTY_COUNTRIES, PROPERTY_CURRENCIES } from '@telivityhaip/shared';
 import { useUnsavedChanges } from './useUnsavedChanges';
 import {
   cloneElement,
@@ -208,11 +211,11 @@ function PropertyForm({
     try {
       new Intl.DateTimeFormat('en', { timeZone: draft.timezone });
       if (
-        !/^[A-Z]{2}$/.test(draft.countryCode) ||
-        !/^[A-Z]{3}$/.test(draft.currencyCode)
+        !PROPERTY_COUNTRIES.includes(draft.countryCode) ||
+        !PROPERTY_CURRENCIES.includes(draft.currencyCode)
       )
         throw Error(
-          'Use uppercase country and currency codes, for example GB and GBP.',
+          'Choose a country and currency from the lists.',
         );
       setSaving(true);
       const keys = [
@@ -254,7 +257,7 @@ function PropertyForm({
             draft[key] === '' &&
             ['email', 'starRating', 'staffLogoMediaId'].includes(key)
               ? null
-              : draft[key],
+              : key === 'postalCode' && typeof draft[key] === 'string' ? normalizePostalCode(draft[key], draft.countryCode) : draft[key],
           ]),
       );
       const response = await api.patch(`/v1/properties/${propertyId}`, {
@@ -367,17 +370,21 @@ function PropertyForm({
           title="Location & contact"
           hint="Maintain the address used by staff and choose the location information guests can see."
         >
+          <Field label="Country"><ReferenceSelect value={draft.countryCode ?? ''} onChange={value => edit('countryCode', value)} options={countryOptions} className={control} required disabled={saving} /></Field>
+          <AddressLookup countryCode={draft.countryCode ?? ''} disabled={saving} onSelect={item => {
+            if (item.source === 'address') {
+              edit('addressLine1', item.addressLine1 ?? ''); edit('addressLine2', '');
+              edit('city', item.city ?? ''); edit('stateProvince', item.stateProvince ?? '');
+            }
+            edit('postalCode', item.postalCode ?? '');
+          }} />
           {text('addressLine1', 'Address line 1', { maxLength: 255 })}
           {text('addressLine2', 'Address line 2', { maxLength: 255 })}
           <div className="grid gap-4 sm:grid-cols-2">
             {text('city', 'City', { maxLength: 100 })}
             {text('stateProvince', 'County / region', { maxLength: 100 })}
             {text('postalCode', 'Postcode', { maxLength: 20 })}
-            {text('countryCode', 'Country code', {
-              required: true,
-              maxLength: 2,
-              hint: 'Two-letter country code, for example GB.',
-            })}
+
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {text('phone', 'Contact phone', { type: 'tel', maxLength: 30 })}
@@ -543,11 +550,7 @@ function PropertyForm({
               required: true,
             })}
           </div>
-          {text('timezone', 'Property timezone', {
-            required: true,
-            maxLength: 50,
-            hint: 'For example Europe/London. This also controls operational dates and times.',
-          })}
+          <Field label="Property timezone"><ReferenceSelect value={draft.timezone ?? ''} onChange={value => edit('timezone', value)} options={timezoneOptions} className={control} required disabled={saving} /></Field>
           <Field
             label="House rules"
             hint="One rule per line: children, pets, smoking, parties, arrival notice or identification. Financial and cancellation terms belong in rate plans and policies."
@@ -599,10 +602,7 @@ function PropertyForm({
           </summary>
           <div className="mt-4 space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
-              {text('currencyCode', 'Currency code', {
-                required: true,
-                maxLength: 3,
-              })}
+              <Field label="Currency"><ReferenceSelect value={draft.currencyCode ?? ''} onChange={value => edit('currencyCode', value)} options={currencyOptions} className={control} required disabled={saving} /></Field>
               {text('defaultLanguage', 'Default language', { required: true, maxLength: 5 })}
               {number('starRating', 'Verified star rating', 1, 5)}
               {number(

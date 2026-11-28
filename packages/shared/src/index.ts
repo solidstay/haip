@@ -382,3 +382,5 @@ export type MigrationSourcePms = (typeof MIGRATION_SOURCE_PMS)[number];
 
 export * from './dashboard-features.js';
 export { STAFF_ROLE_KEYS, STAFF_ROLES, isStaffRole, type StaffRoleKey } from './staff-roles.js';
+
+export * from './property-reference.js';

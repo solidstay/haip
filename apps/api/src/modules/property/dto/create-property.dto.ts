@@ -1,5 +1,7 @@
 import {
   IsString,
+  IsIn,
+  IsTimeZone,
   IsNotEmpty,
   IsOptional,
   IsInt,
@@ -10,6 +12,8 @@ import {
   MaxLength,
   Length,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { PROPERTY_COUNTRIES, PROPERTY_CURRENCIES } from '@telivityhaip/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePropertyDto {
@@ -63,18 +67,24 @@ export class CreatePropertyDto {
   @ApiProperty({ example: 'US', description: 'ISO 3166-1 alpha-2' })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsIn(PROPERTY_COUNTRIES)
   @Length(2, 2)
   countryCode!: string;
 
   @ApiProperty({ example: 'America/New_York', description: 'IANA timezone' })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @IsTimeZone()
   @MaxLength(50)
   timezone!: string;
 
   @ApiProperty({ example: 'USD', description: 'ISO 4217 currency code' })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toUpperCase() : value)
+  @IsIn(PROPERTY_CURRENCIES)
   @Length(3, 3)
   currencyCode!: string;
 

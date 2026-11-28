@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type InputHTMLAttributes } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm, type RegisterOptions } from 'react-hook-form';
+import { Controller, useForm, type RegisterOptions } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { isAxiosError } from 'axios';
+import { countryOptions, currencyOptions, timezoneOptions, ReferenceSelect, type ReferenceOption } from '../components/property/ReferenceSelect';
+import AddressLookup from '../components/property/AddressLookup';
+import { normalizePostalCode } from '@telivityhaip/shared';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useProperty } from '../context/PropertyContext';
@@ -11,7 +14,7 @@ import type { PropertySummary } from '../lib/property-types';
 type PropertyForm = {
   name: string; code: string; countryCode: string; timezone: string;
   currencyCode: string; totalRooms: number; addressLine1: string;
-  city: string; postalCode: string; email: string; phone: string;
+  city: string; stateProvince: string; postalCode: string; email: string; phone: string;
   checkInTime: string; checkOutTime: string;
 };
 
@@ -29,8 +32,8 @@ export default function AddProperty() {
   const focusNewForm = useRef(false);
   const feedback = useRef<HTMLParagraphElement>(null);
   const successHeading = useRef<HTMLHeadingElement>(null);
-  const { register, handleSubmit, reset, setError, setFocus, formState: { errors, isSubmitting } } = useForm<PropertyForm>({
-    defaultValues: { checkInTime: '15:00', checkOutTime: '11:00' },
+  const { control, watch, setValue, register, handleSubmit, reset, setError, setFocus, formState: { errors, isSubmitting } } = useForm<PropertyForm>({
+    defaultValues: { checkInTime: '15:00', checkOutTime: '11:00', countryCode: '', currencyCode: '', timezone: '' },
   });
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export default function AddProperty() {
     if (submitting.current) return;
     submitting.current = true;
     setRequestError('');
+    if (values.postalCode) values.postalCode = normalizePostalCode(values.postalCode, values.countryCode);
     try {
       const payload = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ''));
       // Creating a tenant must not inherit the currently selected tenant's query parameter.
@@ -86,9 +90,17 @@ export default function AddProperty() {
     </div>;
   }
 
+  function reference(name: 'countryCode' | 'currencyCode' | 'timezone', label: string, options: ReferenceOption[]) {
+    return <div><label htmlFor={`property-${name}`} className="block text-sm font-medium text-telivity-navy">{label} *</label>
+      <Controller name={name} control={control} rules={{ required: t('addProperty.required'), validate: value => options.some(item => item.value === value) || 'Choose an option from the list.' }}
+        render={({ field: { ref, ...props } }) => <ReferenceSelect {...props} ref={ref} id={`property-${name}`} required disabled={isSubmitting} options={options} className={inputClass}
+          aria-invalid={!!errors[name]} aria-describedby={errors[name] ? `property-${name}-error` : undefined} />} />
+      {errors[name] && <p id={`property-${name}-error`} role="alert" className="mt-2 text-sm text-red-700">{errors[name]?.message}</p>}
+    </div>;
+  }
+  const countryCode = watch('countryCode');
   const required = { required: t('addProperty.required'), setValueAs: (value: string) => value.trim() };
   const optional = { setValueAs: (value: string) => value.trim() };
-  const upperCase = (value: string) => value.trim().toUpperCase();
 
   if (created) {
     const query = `?propertyId=${encodeURIComponent(created.id)}`;
@@ -118,19 +130,25 @@ export default function AddProperty() {
           {field('name', required, { maxLength: 255, autoComplete: 'organization' })}
           {field('code', required, { maxLength: 20, autoComplete: 'off' }, t('addProperty.codeHint'))}
           {field('totalRooms', { required: t('addProperty.required'), valueAsNumber: true, validate: value => (Number.isInteger(value) && Number(value) > 0 && Number(value) <= 2147483647) || t('addProperty.roomsInvalid') }, { type: 'number', min: 1, step: 1 }, t('addProperty.roomsHint'))}
-          {field('currencyCode', { ...required, setValueAs: upperCase, pattern: { value: /^[A-Z]{3}$/, message: t('addProperty.currencyInvalid') } }, { maxLength: 3, autoComplete: 'off' }, t('addProperty.currencyHint'))}
+          {reference('currencyCode', 'Currency', currencyOptions)}
         </div>
       </fieldset>
       <fieldset disabled={isSubmitting} className="mt-8 border-t border-gray-200 pt-6">
         <legend className="text-lg font-semibold text-telivity-navy">{t('addProperty.location')}</legend>
         <div className="grid gap-5 sm:grid-cols-2">
-          {field('countryCode', { ...required, setValueAs: upperCase, pattern: { value: /^[A-Z]{2}$/, message: t('addProperty.countryInvalid') } }, { maxLength: 2, autoComplete: 'country' }, t('addProperty.countryHint'))}
-          {field('timezone', { ...required, validate: value => {
-            try { new Intl.DateTimeFormat('en', { timeZone: String(value) }); return true; }
-            catch { return t('addProperty.timezoneInvalid'); }
-          } }, { maxLength: 50, autoComplete: 'off' }, t('addProperty.timezoneHint'))}
+          {reference('countryCode', 'Country', countryOptions)}
+          {reference('timezone', 'Timezone', timezoneOptions)}
+          <div className="sm:col-span-2"><AddressLookup countryCode={countryCode} disabled={isSubmitting} onSelect={item => {
+            if (item.source === 'address') {
+              setValue('addressLine1', item.addressLine1 ?? '', { shouldDirty: true });
+              setValue('city', item.city ?? '', { shouldDirty: true });
+              setValue('stateProvince', item.stateProvince ?? '', { shouldDirty: true });
+            }
+            setValue('postalCode', item.postalCode ?? '', { shouldDirty: true });
+          }} /></div>
           {field('addressLine1', optional, { maxLength: 255, autoComplete: 'address-line1' })}
           {field('city', optional, { maxLength: 100, autoComplete: 'address-level2' })}
+          {field('stateProvince', optional, { maxLength: 100, autoComplete: 'address-level1' })}
           {field('postalCode', optional, { maxLength: 20, autoComplete: 'postal-code' })}
         </div>
       </fieldset>

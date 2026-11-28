@@ -1,3 +1,4 @@
+import { PropertyLocationService } from './property-location.service';
 import { Module } from '@nestjs/common';
 import { PropertyController } from './property.controller';
 import { OrganizationController } from './organization.controller';
@@ -9,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [WebhookModule, AuthModule],
   controllers: [PropertyController, OrganizationController],
-  providers: [PropertyService, OrganizationService],
+  providers: [PropertyService, OrganizationService, PropertyLocationService],
   exports: [PropertyService, OrganizationService],
 })
 export class PropertyModule {}

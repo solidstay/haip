@@ -1,4 +1,5 @@
 import { Injectable, Inject, Optional, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { normalizePostalCode } from '@telivityhaip/shared';
 import { eq, inArray } from 'drizzle-orm';
 import { properties, media, roles, rolePermissions, userRoles, auditLogs } from '@telivityhaip/database';
 import { DRIZZLE } from '../../database/database.module';
@@ -24,6 +25,7 @@ export class PropertyService {
   ) {}
 
   async create(dto: CreatePropertyDto, creator?: AuthUser, actor?: AuditActor) {
+    if (typeof dto.postalCode === 'string') dto = { ...dto, postalCode: normalizePostalCode(dto.postalCode, dto.countryCode) };
     // A newly created tenant has no local grants yet. Give only its authenticated
     // administrator creator the existing admin profile, scoped to this new row.
     const localUser = creator ? await this.permissions?.findLocalUser(creator.sub, creator.email) : undefined;
@@ -84,6 +86,7 @@ export class PropertyService {
       const [previous] = await tx.select().from(properties).where(eq(properties.id, id)).for('update');
       if (!previous) throw new NotFoundException(`Property ${id} not found`);
       const { expectedUpdatedAt, publicListing, ...fields } = dto;
+      if (typeof fields.postalCode === 'string') fields.postalCode = normalizePostalCode(fields.postalCode, fields.countryCode ?? previous.countryCode);
       if (expectedUpdatedAt && new Date(previous.updatedAt).toISOString() !== new Date(expectedUpdatedAt).toISOString()) {
         throw new ConflictException('This property was changed by another user. Reload before saving.');
       }

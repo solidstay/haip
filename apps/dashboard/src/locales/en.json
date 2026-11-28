@@ -2408,6 +2408,7 @@
       "currencyCode": "Currency code",
       "totalRooms": "Number of rooms or units",
       "addressLine1": "Street address",
+      "stateProvince": "County / region",
       "city": "City",
       "postalCode": "Postal code",
       "email": "Contact email",
