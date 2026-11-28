@@ -381,3 +381,4 @@ export const MIGRATION_SOURCE_PMS = ['mews', 'cloudbeds', 'apaleo', 'ohip'] as c
 export type MigrationSourcePms = (typeof MIGRATION_SOURCE_PMS)[number];
 
 export * from './dashboard-features.js';
+export { STAFF_ROLE_KEYS, STAFF_ROLES, isStaffRole, type StaffRoleKey } from './staff-roles.js';

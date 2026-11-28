@@ -13,6 +13,7 @@ import {
   UploadedFile,
   UseInterceptors,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -21,6 +22,8 @@ import {
   ApiResponse,
   ApiConsumes,
 } from '@nestjs/swagger';
+import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
+import { userCanAccessProperty } from '../auth/property-access';
 import { Roles } from '../auth/roles.decorator';
 import { MediaService } from './media.service';
 import { CreateMediaDto } from './dto/create-media.dto';
@@ -52,7 +55,7 @@ export class MediaController {
   }
 
   @Post()
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @ApiOperation({ summary: 'Attach an image by URL' })
   @ApiResponse({ status: 201, description: 'Media created' })
   create(@Body() dto: CreateMediaDto) {
@@ -60,7 +63,7 @@ export class MediaController {
   }
 
   @Post('reorder')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reorder an owner\'s media' })
   reorder(@Body() dto: ReorderMediaDto) {
@@ -68,7 +71,7 @@ export class MediaController {
   }
 
   @Post('upload')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @UseInterceptors(
     FileInterceptor('file', {
       // Cap upload size (DoS: the buffer is held in memory) and reject obvious
@@ -88,12 +91,14 @@ export class MediaController {
   upload(
     @Body() dto: UploadMediaDto,
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthUser,
   ) {
+    if (!userCanAccessProperty(user, dto.propertyId)) throw new ForbiddenException('Property access denied');
     return this.mediaService.uploadAndCreate(dto, file);
   }
 
   @Post(':id/primary')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark a media item as the owner\'s primary image' })
   setPrimary(
@@ -104,7 +109,7 @@ export class MediaController {
   }
 
   @Patch(':id')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @ApiOperation({ summary: 'Update media metadata (caption, category, order)' })
   @ApiResponse({ status: 200, description: 'Media updated' })
   @ApiResponse({ status: 404, description: 'Media not found at this property' })
@@ -117,7 +122,7 @@ export class MediaController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a media item (scoped to property)' })
   @ApiResponse({ status: 204, description: 'Media deleted' })

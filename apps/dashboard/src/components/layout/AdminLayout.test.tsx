@@ -30,6 +30,6 @@ describe('Separate administration view', () => {
     auth.admin = true; setup(<h1>Admin features</h1>);
     expect(screen.getByRole('heading', { name: 'Admin features' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to staff dashboard' })).toHaveAttribute('href', '/properties');
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Staff access' })).toHaveAttribute('href', '/admin/staff');
   });
 });

@@ -45,6 +45,15 @@ export const users = pgTable(
     email: varchar('email', { length: 255 }).notNull(),
     name: varchar('name', { length: 255 }).notNull(),
     status: userStatusEnum('status').notNull().default('active'),
+    /** Server-owned login provisioning. Never accepted by ordinary user/profile DTOs. */
+    staffProvisioning: jsonb('staff_provisioning').$type<{
+      roleKey: string;
+      delivery: 'pending' | 'sent' | 'failed';
+      sentAt?: string;
+      acceptedAt?: string;
+      error?: string;
+      identitySync?: 'pending' | 'complete';
+    } | null>(),
     // Self-service UI prefs (report favorites, etc.) — not property-scoped roles.
     preferences: jsonb('preferences').$type<{
       reportFavorites?: string[];

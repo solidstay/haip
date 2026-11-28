@@ -62,7 +62,7 @@ export class PropertyController {
   }
 
   @Patch(':id')
-  @Roles('admin')
+  @Roles('admin', 'general_manager')
   @ApiOperation({ summary: 'Update property' })
   @ApiResponse({ status: 200, description: 'Property updated' })
   @ApiResponse({ status: 404, description: 'Property not found' })
@@ -70,7 +70,9 @@ export class PropertyController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePropertyDto,
     @AuditActorCtx() actor?: AuditActor,
+    @CurrentUser() user?: AuthUser,
   ) {
+    if (this.authOn() && (!user || !userCanAccessProperty(user, id))) throw new ForbiddenException('You do not have access to this property');
     return this.propertyService.update(id, dto, actor);
   }
 }

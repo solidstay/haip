@@ -130,7 +130,8 @@ export class UsersService {
   }
 
   async update(id: string, propertyId: string, dto: UpdateUserDto, actor?: AuditActor) {
-    await this.getOwned(id, propertyId);
+    const owned = await this.getOwned(id, propertyId);
+    if (owned.staffProvisioning) throw new ConflictException('Manage invited staff through Staff access');
     // Transactional: the mutation and its audit row commit together, so an audit
     // failure can't leave an unrecorded change (GDPR/PCI accountability).
     return this.db.transaction(async (tx: any) => {
@@ -153,7 +154,8 @@ export class UsersService {
 
   /** DELETE = soft-disable (preserves history). */
   async disable(id: string, propertyId: string, actor?: AuditActor) {
-    await this.getOwned(id, propertyId);
+    const owned = await this.getOwned(id, propertyId);
+    if (owned.staffProvisioning) throw new ConflictException('Manage invited staff through Staff access');
     return this.db.transaction(async (tx: any) => {
       await tx
         .update(users)
@@ -191,6 +193,8 @@ export class UsersService {
     } else {
       await this.getOwned(userId, propertyId);
     }
+    const [managed] = await this.db.select({ staffProvisioning: users.staffProvisioning }).from(users).where(eq(users.id, userId));
+    if (managed?.staffProvisioning) throw new ConflictException('Manage invited staff through Staff access');
     await this.assertRolesExist(roleIds, propertyId);
     await this.db.transaction(async (tx: any) => {
       await tx

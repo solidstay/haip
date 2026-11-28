@@ -40,7 +40,11 @@ export class WsAuthService {
     });
   }
 
-  assertActiveIdentity(user: AuthUser): Promise<void> { return this.permissions.assertActiveIdentity(user); }
+  async assertActiveIdentity(user: AuthUser): Promise<void> {
+    await this.permissions.assertActiveIdentity(user);
+    const managed = await this.permissions.managedIdentity(user);
+    if (managed) Object.assign(user, managed);
+  }
 
   /**
    * Verify a bearer token and return the extracted AuthUser.
@@ -79,6 +83,8 @@ export class WsAuthService {
       throw new Error('Invalid token audience (azp mismatch)');
     }
 
+    const managed = await this.permissions.managedIdentity(payload);
+    if (managed) return managed;
     await this.assertActiveIdentity(payload);
     return {
       sub: payload.sub,

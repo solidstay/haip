@@ -66,6 +66,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (payload.azp && !this.allowedAzp.includes(payload.azp)) {
       throw new UnauthorizedException('Invalid token audience (azp mismatch)');
     }
+    const managed = await this.permissions.managedIdentity(payload);
+    if (managed) return managed;
     await this.permissions.assertActiveIdentity(payload);
     return {
       sub: payload.sub,

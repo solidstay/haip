@@ -42,6 +42,11 @@ export class AdminController {
     private readonly permissionsService: PermissionsService,
   ) {}
 
+  @Get('me/identity')
+  @Roles()
+  @ApiOperation({ summary: 'Current server-authoritative staff identity and access' })
+  myIdentity(@CurrentUser() user: AuthUser) { return user; }
+
   // ---- Permission catalog ----
 
   @Get('permissions')

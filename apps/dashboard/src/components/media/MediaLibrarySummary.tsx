@@ -8,7 +8,7 @@ import MediaGallery from './MediaGallery';
 export default function MediaLibrarySummary({ propertyId }: { propertyId: string }) {
   const { t } = useTranslation();
   const { hasRole } = useAuth();
-  const canManage = hasRole('admin');
+  const canManage = hasRole('admin', 'general_manager');
   const { data: items = [], isPending, isError } = useMediaList(propertyId, 'property', propertyId);
   const cover = items.find(item => item.isPrimary) ?? items[0];
 

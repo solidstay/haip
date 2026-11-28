@@ -14,7 +14,7 @@ import { JwtStrategy } from './jwt.strategy';
  */
 function strategy(env: Record<string, string>): JwtStrategy {
   const config = new ConfigService(env);
-  return new JwtStrategy(config, { assertActiveIdentity: async () => {} } as PermissionsService);
+  return new JwtStrategy(config, { managedIdentity: async () => undefined, assertActiveIdentity: async () => {} } as PermissionsService);
 }
 
 const BASE = {

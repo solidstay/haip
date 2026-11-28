@@ -17,7 +17,7 @@ describe('WebSocket JWT and local staff lifecycle', () => {
   it('rejects the same signed unexpired token after a local disable', async () => {
     let active = true;
     const assertActiveIdentity = vi.fn(async () => { if (!active) throw new UnauthorizedException('Staff account is not active'); });
-    const service = new WsAuthService(config, { assertActiveIdentity } as unknown as PermissionsService);
+    const service = new WsAuthService(config, { managedIdentity: async () => undefined, assertActiveIdentity } as unknown as PermissionsService);
     const retained = token();
     expect((await service.verify(retained)).sub).toBe('synthetic-sub'); active = false;
     await expect(service.verify(retained)).rejects.toBeInstanceOf(UnauthorizedException);
@@ -25,7 +25,7 @@ describe('WebSocket JWT and local staff lifecycle', () => {
   });
   it('keeps signature and client checks before local status lookup', async () => {
     const assertActiveIdentity = vi.fn().mockResolvedValue(undefined);
-    const service = new WsAuthService(config, { assertActiveIdentity } as unknown as PermissionsService);
+    const service = new WsAuthService(config, { managedIdentity: async () => undefined, assertActiveIdentity } as unknown as PermissionsService);
     await expect(service.verify(token({ azp: 'wrong-client' }))).rejects.toThrow('azp mismatch');
     await expect(service.verify('invalid.jwt.value')).rejects.toThrow();
     expect(assertActiveIdentity).not.toHaveBeenCalled();

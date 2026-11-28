@@ -46,7 +46,7 @@ export default function RoomDetails() {
 
 function RoomPage({ propertyId, room, listing, shared }: { propertyId: string; room: Row; listing: Row; shared: boolean }) {
   const { hasRole, hasPermission } = useAuth();
-  const canManagePhotos = hasRole('admin');
+  const canManagePhotos = hasRole('admin', 'general_manager');
   const ownPhotos = useMediaList(propertyId, 'room', room.id);
   const canReadFees = hasPermission('ops.read') && hasPermission('services.read');
   const canReadRates = hasPermission('rateplans.read');

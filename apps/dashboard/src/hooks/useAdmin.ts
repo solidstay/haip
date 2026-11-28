@@ -7,6 +7,7 @@ export interface AdminUserRole {
   name: string;
 }
 export interface AdminUser {
+  staffProvisioning?: { roleKey: string } | null;
   id: string;
   email: string;
   name: string;

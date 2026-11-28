@@ -10,6 +10,7 @@ import { useRealtimeInvalidation } from './hooks/useRealtimeInvalidation';
 import { isBookingRequestsUiEnabled } from './lib/bookingRequestsFeature';
 
 const Properties = lazy(() => import('./pages/Properties'));
+const Staff = lazy(() => import('./pages/Staff'));
 const AdminFeatures = lazy(() => import('./pages/AdminFeatures'));
 const WebsitePages = lazy(() => import('./pages/WebsitePages'));
 
@@ -47,6 +48,7 @@ export default function App() {
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return (
     <AdminLayout><ErrorBoundary><Suspense fallback={<SkeletonPage />}>
       <Routes>
+        <Route path="/admin/staff" element={<Staff />} />
         <Route path="/admin/features" element={<AdminFeatures />} />
         <Route path="/admin/website/pages/:pageId?" element={<WebsitePages />} />
         <Route path="*" element={<Navigate to="/admin/features" replace />} />

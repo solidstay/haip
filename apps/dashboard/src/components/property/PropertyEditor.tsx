@@ -130,7 +130,7 @@ function PropertyForm({
 }) {
   const queryClient = useQueryClient();
   const { hasRole } = useAuth();
-  const canManage = hasRole('admin');
+  const canManage = hasRole('admin', 'general_manager');
   const [base, setBase] = useState(property);
   const [draft, setDraft] = useState<PropertyRecord>(property);
   const [listing, setListing] = useState<PropertyRecord>(

@@ -148,13 +148,14 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           continue;
         }
         try {
-          const identity = JSON.stringify([user.sub, user.email]);
+          const identity = client.id;
           let check = statusChecks.get(identity);
           if (!check) {
             check = this.wsAuth.assertActiveIdentity(user);
             statusChecks.set(identity, check);
           }
           await check;
+          if (!this.userCanAccessProperty(user, propertyId)) { client.disconnect(true); continue; }
           client.emit(event, payload);
         } catch {
           client.disconnect(true);

@@ -40,10 +40,17 @@ describe('local staff status at socket entry and delivery boundaries', () => {
     await gateway.broadcastToProperty('property-a', 'reservation.created', {});
     for (const client of clients) { expect(client.emit).not.toHaveBeenCalled(); expect(client.disconnect).toHaveBeenCalledWith(true); }
   });
-  it('checks a shared identity once per broadcast, not once per open tab', async () => {
+  it('refreshes access on every open tab before broadcast', async () => {
     const { gateway, clients, assertActiveIdentity } = setup(); clients[1].data.user = clients[0].data.user;
-    await gateway.broadcastToProperty('property-a', 'reservation.created', {}); expect(assertActiveIdentity).toHaveBeenCalledOnce();
+    await gateway.broadcastToProperty('property-a', 'reservation.created', {}); expect(assertActiveIdentity).toHaveBeenCalledTimes(2);
     for (const client of clients) expect(client.emit).toHaveBeenCalledOnce();
+  });
+  it('stops delivery when an existing subscriber loses this property', async () => {
+    const { gateway, clients, assertActiveIdentity } = setup();
+    assertActiveIdentity.mockImplementation(async user => { if (user.sub === 'staff-a') user.propertyIds = ['property-b']; });
+    await gateway.broadcastToProperty('property-a', 'reservation.created', {});
+    expect(clients[0].emit).not.toHaveBeenCalled(); expect(clients[0].disconnect).toHaveBeenCalledWith(true);
+    expect(clients[1].emit).toHaveBeenCalledOnce();
   });
   it('preserves the explicit auth-disabled demo path', async () => {
     const { gateway, clients, roomEmit, assertActiveIdentity, fetchSockets } = setup(false);

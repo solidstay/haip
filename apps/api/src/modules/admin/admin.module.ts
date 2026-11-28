@@ -1,3 +1,6 @@
+import { StaffIdentityService } from './staff-identity.service';
+import { StaffInvitationsService } from './staff-invitations.service';
+import { StaffInvitationsController } from './staff-invitations.controller';
 import { DashboardSettingsController } from './dashboard-settings.controller';
 import { DashboardSettingsService } from './dashboard-settings.service';
 import { Module } from '@nestjs/common';
@@ -12,8 +15,8 @@ import { RolesService } from './roles.service';
  */
 @Module({
   imports: [AuthModule],
-  controllers: [AdminController, DashboardSettingsController],
-  providers: [UsersService, RolesService, DashboardSettingsService],
+  controllers: [StaffInvitationsController, AdminController, DashboardSettingsController],
+  providers: [StaffIdentityService, StaffInvitationsService, UsersService, RolesService, DashboardSettingsService],
   exports: [UsersService, RolesService],
 })
 export class AdminModule {}

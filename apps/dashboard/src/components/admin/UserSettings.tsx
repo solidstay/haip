@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { UserPlus, ShieldCheck, Ban } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -14,37 +15,17 @@ export default function UserSettings({ propertyId }: { propertyId: string }) {
   const { t } = useTranslation();
   const { data: users = [], isLoading } = useUsers(propertyId);
   const { data: roles = [] } = useRoles(propertyId);
-  const { create, disable, assignRoles } = useUserMutations(propertyId);
+  const { disable, assignRoles } = useUserMutations(propertyId);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [newRoleIds, setNewRoleIds] = useState<string[]>([]);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
-
-  const toggle = (list: string[], id: string) =>
-    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
-
-  const submitCreate = () => {
-    if (!name.trim() || !email.trim()) return;
-    create.mutate(
-      { name: name.trim(), email: email.trim(), roleIds: newRoleIds },
-      {
-        onSuccess: () => {
-          setCreateOpen(false);
-          setName(''); setEmail(''); setNewRoleIds([]);
-        },
-      },
-    );
-  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-telivity-navy">{t('admin.users')}</h2>
-        <button onClick={() => setCreateOpen(true)} className="flex items-center gap-2 bg-telivity-teal text-white rounded-lg px-3 py-1.5 text-sm font-semibold">
-          <UserPlus size={15} /> {t('admin.addUser')}
-        </button>
+        <Link to="/admin/staff" className="flex items-center gap-2 bg-telivity-teal text-white rounded-lg px-3 py-1.5 text-sm font-semibold">
+          <UserPlus size={15} /> Invite staff
+        </Link>
       </div>
 
       <table className="w-full">
@@ -78,6 +59,7 @@ export default function UserSettings({ propertyId }: { propertyId: string }) {
                 </div>
               </td>
               <td className="px-4 py-3 text-right whitespace-nowrap">
+                {u.staffProvisioning ? <Link to="/admin/staff" className="text-sm font-medium text-telivity-teal">Manage access</Link> : <>
                 <button onClick={() => setEditUser(u)} title={t('admin.editRoles')} className="inline-flex items-center gap-1 text-telivity-teal hover:text-telivity-light-teal text-sm font-medium mr-3">
                   <ShieldCheck size={14} /> {t('admin.roles')}
                 </button>
@@ -86,6 +68,7 @@ export default function UserSettings({ propertyId }: { propertyId: string }) {
                     <Ban size={14} /> {t('admin.disable')}
                   </button>
                 )}
+                </>}
               </td>
             </tr>
           ))}
@@ -94,22 +77,6 @@ export default function UserSettings({ propertyId }: { propertyId: string }) {
           )}
         </tbody>
       </table>
-
-      {/* Create user */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.addUser')}>
-        <div className="space-y-4">
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('admin.name')} {t('admin.required')}</label><input value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div><label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('admin.email')} {t('admin.required')}</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-telivity-teal" /></div>
-          <div>
-            <label className="block text-xs font-medium text-telivity-mid-grey mb-1">{t('admin.roles')}</label>
-            <RoleChecklist roles={roles} selected={newRoleIds} onToggle={(id) => setNewRoleIds((s) => toggle(s, id))} />
-          </div>
-          {create.isError && <p className="text-xs text-red-500">{t('admin.couldNotCreateUser')}</p>}
-          <button onClick={submitCreate} disabled={!name.trim() || !email.trim() || create.isPending} className="w-full bg-telivity-teal text-white rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50">
-            {create.isPending ? t('admin.creating') : t('admin.createUser')}
-          </button>
-        </div>
-      </Modal>
 
       {/* Edit roles */}
       <Modal open={!!editUser} onClose={() => setEditUser(null)} title={editUser ? t('admin.rolesForUser', { name: editUser.name }) : ''}>

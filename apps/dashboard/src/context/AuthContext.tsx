@@ -13,6 +13,8 @@ import { reconnectSocket, disconnectSocket } from '../lib/socket';
 import { useToast } from '../components/ui/Toast';
 import { useTranslation } from 'react-i18next';
 
+let initialization: Promise<boolean> | undefined;
+
 interface ApiErrorResponse {
   config?: {
     url?: string;
@@ -88,55 +90,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(AUTH_ENABLED);
+  const [signInFailed, setSignInFailed] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
 
   useEffect(() => {
     if (!AUTH_ENABLED) return;
 
+    let disposed = false;
     let refreshInterval: NodeJS.Timeout | undefined;
 
-    keycloak
-      .init({
+    initialization ??= keycloak.init({
         onLoad: 'login-required',
         pkceMethod: 'S256',
         checkLoginIframe: false,
-      })
-      .then((authenticated) => {
+      });
+    initialization.then(async (authenticated) => {
+        if (disposed) return;
         if (authenticated && keycloak.tokenParsed) {
-          const parsed = keycloak.tokenParsed as any;
-          setUser({
-            sub: parsed.sub ?? '',
-            email: parsed.email ?? '',
-            name: parsed.name ?? parsed.preferred_username ?? '',
-            roles: parsed.realm_access?.roles ?? [],
-          });
-
           // Set token on axios
           api.defaults.headers.common['Authorization'] = `Bearer ${keycloak.token}`;
+          const current = await api.get<AuthUser>('/v1/admin/me/identity', { params: { propertyId: undefined }, skipAuthRedirect: true });
+          if (disposed) return;
+          setUser(current.data);
 
           // Auto-refresh every 4 minutes (token expires in 5)
           refreshInterval = setInterval(() => {
-            keycloak.updateToken(60).then((refreshed) => {
+            keycloak.updateToken(60).then(async (refreshed) => {
               if (refreshed) {
                 api.defaults.headers.common['Authorization'] = `Bearer ${keycloak.token}`;
+                setUser((await api.get<AuthUser>('/v1/admin/me/identity', { params: { propertyId: undefined }, skipAuthRedirect: true })).data);
                 reconnectSocket();
               }
             }).catch((err) => {
               disconnectSocket();
               console.error('Token refresh failed:', err);
-              keycloak.login();
+              setSignInFailed(true);
             });
           }, 4 * 60 * 1000);
         }
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error('Keycloak initialization failed:', err);
+        if (disposed) return;
+        console.error('Staff sign-in failed:', err);
+        setSignInFailed(true);
         setIsLoading(false);
       });
 
     return () => {
+      disposed = true;
       if (refreshInterval) clearInterval(refreshInterval);
     };
   }, []);
@@ -146,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401 && AUTH_ENABLED) {
+        if (error.response?.status === 401 && AUTH_ENABLED && !error.config?.skipAuthRedirect) {
           keycloak.login();
           return Promise.reject(error);
         }
@@ -224,6 +227,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [user, roles, permissions, isLoading, logout, hasRole, hasPermission],
   );
+
+  if (signInFailed) return <main className="mx-auto max-w-lg p-8"><h1 className="text-xl font-semibold">Staff sign-in could not be completed</h1><p role="alert" className="my-4">Try again, or contact your platform administrator if your access has changed.</p><button className="mr-4 min-h-[44px] underline" onClick={() => window.location.reload()}>Try again</button><button className="min-h-[44px] underline" onClick={logout}>Sign out</button></main>;
 
   if (isLoading) {
     return (
