@@ -55,7 +55,7 @@ export class MediaController {
   }
 
   @Post()
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @ApiOperation({ summary: 'Attach an image by URL' })
   @ApiResponse({ status: 201, description: 'Media created' })
   create(@Body() dto: CreateMediaDto) {
@@ -63,7 +63,7 @@ export class MediaController {
   }
 
   @Post('reorder')
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reorder an owner\'s media' })
   reorder(@Body() dto: ReorderMediaDto) {
@@ -71,7 +71,7 @@ export class MediaController {
   }
 
   @Post('upload')
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @UseInterceptors(
     FileInterceptor('file', {
       // Cap upload size (DoS: the buffer is held in memory) and reject obvious
@@ -98,7 +98,7 @@ export class MediaController {
   }
 
   @Post(':id/primary')
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark a media item as the owner\'s primary image' })
   setPrimary(
@@ -109,7 +109,7 @@ export class MediaController {
   }
 
   @Patch(':id')
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @ApiOperation({ summary: 'Update media metadata (caption, category, order)' })
   @ApiResponse({ status: 200, description: 'Media updated' })
   @ApiResponse({ status: 404, description: 'Media not found at this property' })
@@ -122,7 +122,7 @@ export class MediaController {
   }
 
   @Delete(':id')
-  @Roles('admin', 'general_manager')
+  @Roles('admin', 'general_manager', 'front_desk')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a media item (scoped to property)' })
   @ApiResponse({ status: 204, description: 'Media deleted' })
